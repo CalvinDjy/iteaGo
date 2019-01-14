@@ -67,6 +67,7 @@ func (i *Itea) Register(beans ...[] interface{}) {
 	i.ioc.RegisterBeans(beanList)
 }
 
+//test
 //Start Itea
 func (i *Itea) Start() {
 	go logProcessInfo()
