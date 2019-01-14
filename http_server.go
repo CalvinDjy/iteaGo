@@ -68,12 +68,12 @@ func (hs *HttpServer)Execute() {
 
 			interceptorArgs := []reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)}
 			for _, ins := range interceptorList {
-				err := ins["before"].Call(interceptorArgs)[0].Interface()
+				err := ins[0].Call(interceptorArgs)[0].Interface()
 				if err != nil {
 					result = reflect.ValueOf(err)
 					break
 				}
-				afterMethod := ins["after"].Call(interceptorArgs)
+				afterMethod := ins[1].Call(interceptorArgs)
 				defer afterMethod[0].Call([]reflect.Value{})
 			}
 

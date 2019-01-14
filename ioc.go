@@ -25,12 +25,11 @@ const (
 type Ioc struct {
 	ctx 				context.Context
 	register 			*Register
-	abstractByName 		map[string]reflect.Type
-	interceptorType 	map[string]reflect.Type
-	instanceByName 		map[string]interface{}
-	instanceByType 		map[reflect.Type]interface{}
-	mutex 				*sync.Mutex
+	typeN 				map[string]reflect.Type
+	insN 				map[string]interface{}
+	insT 				map[reflect.Type]interface{}
 	imports				map[string]map[string]string
+	mutex 				*sync.Mutex
 	wg 					sync.WaitGroup
 }
 
@@ -40,12 +39,12 @@ func NewIoc(ctx context.Context) (*Ioc) {
 	ioc := &Ioc{
 		ctx:ctx,
 		register:register,
-		instanceByName:make(map[string]interface{}),
-		instanceByType:make(map[reflect.Type]interface{}),
+		typeN:register.Init(),
+		insN:make(map[string]interface{}),
+		insT:make(map[reflect.Type]interface{}),
 		mutex:new(sync.Mutex),
 		imports:make(map[string]map[string]string),
 	}
-	ioc.abstractByName, ioc.interceptorType = register.Init()
 
 	if !strings.EqualFold(ctx.Value(DB_CONFIG).(string), "") {
 		ioc.wg.Add(1)
@@ -99,12 +98,9 @@ func (ioc *Ioc) importConfig(imports []string) {
 
 //Register beans
 func (ioc *Ioc) RegisterBeans(beans [] interface{}) {
-	m, i := ioc.register.Register(beans)
-	for mn, mt := range m {
-		ioc.abstractByName[mn] = mt
-	}
-	for in, it := range i {
-		ioc.interceptorType[in] = it
+	m := ioc.register.Register(beans)
+	for n, t := range m {
+		ioc.typeN[n] = t
 	}
 }
 
@@ -158,7 +154,7 @@ func (ioc *Ioc)getInstanceByName(name string) (interface{}) {
 		instance interface{}
 		exist bool
 	)
-	if instance, exist = ioc.instanceByName[name];!exist {
+	if instance, exist = ioc.insN[name];!exist {
 		instance = ioc.buildInstance(ioc.getType(name))
 	}
 	return instance
@@ -169,7 +165,7 @@ func (ioc *Ioc)getInstanceByType(t reflect.Type) (interface{}) {
 		instance interface{}
 		exist bool
 	)
-	if instance, exist = ioc.instanceByType[t];!exist {
+	if instance, exist = ioc.insT[t];!exist {
 		instance = ioc.buildInstance(t)
 	}
 	return instance
@@ -226,8 +222,8 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	}
 
 	if ins.Interface() != nil {
-		ioc.instanceByName[t.Name()] = ins.Interface()
-		ioc.instanceByType[t] = ins.Interface()
+		ioc.insN[t.Name()] = ins.Interface()
+		ioc.insT[t] = ins.Interface()
 	}
 
 	return ins.Interface()
@@ -235,7 +231,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 
 //Get type of bean
 func (ioc *Ioc) getType(name string) reflect.Type{
-	if t, ok := ioc.abstractByName[name]; ok {
+	if t, ok := ioc.typeN[name]; ok {
 		return t
 	}
 	return nil

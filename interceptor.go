@@ -6,8 +6,8 @@ import (
 )
 
 type IInterceptor interface {
-	Before(*http.Request, *reflect.Value) Error
-	After(*http.Request, *reflect.Value) func()
+	Enter(*http.Request, *reflect.Value) Error
+	Exit(*http.Request, *reflect.Value) func()
 }
 
 type InterceptorManager struct {
@@ -20,16 +20,16 @@ func NewInterceptorManager(ioc *Ioc) *InterceptorManager {
 	}
 }
 
-func (im *InterceptorManager) GetInterceptor() []map[string]reflect.Value {
-	interceptorList := make([]map[string]reflect.Value, len(im.ioc.interceptorType))
-	i := 0
-	for _, t := range im.ioc.interceptorType {
-		interceptInsVal := reflect.ValueOf(im.ioc.GetInstanceByType(t))
-		interceptorList[i] = map[string]reflect.Value{
-			"before": interceptInsVal.MethodByName("Before"),
-			"after": interceptInsVal.MethodByName("After"),
+func (im *InterceptorManager) GetInterceptor() [][]reflect.Value {
+	var ilist [][]reflect.Value
+	for _, t := range im.ioc.typeN {
+		if t.Implements(reflect.TypeOf(new(IInterceptor)).Elem()) {
+			v := reflect.ValueOf(im.ioc.GetInstanceByType(t))
+			ilist = append(ilist, []reflect.Value{
+				v.MethodByName("Enter"),
+				v.MethodByName("Exit"),
+			})
 		}
-		i++
 	}
-	return interceptorList
+	return ilist
 }
