@@ -188,7 +188,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 
 	//Inject construct params
 	for index := 0; index < t.NumField(); index++ {
-		f := ins.Elem().FieldByName(t.Field(index).Name)
+		f := ins.Elem().FieldByIndex([]int{index})
 		if !f.CanSet() {
 			continue
 		}
@@ -218,7 +218,11 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	//Execute init method of instance
 	im := ins.MethodByName(INIT_FUNC)
 	if im.IsValid() {
-		im.Call(nil)
+		if im.Type().NumIn() > 0 {
+			im.Call([]reflect.Value{ins})
+		} else {
+			im.Call(nil)
+		}
 	}
 
 	if ins.Interface() != nil {

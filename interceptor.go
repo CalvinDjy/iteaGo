@@ -6,7 +6,7 @@ import (
 )
 
 type IInterceptor interface {
-	Enter(*http.Request, *reflect.Value) Error
+	Enter(*http.Request, *reflect.Value) error
 	Exit(*http.Request, *reflect.Value) func()
 }
 

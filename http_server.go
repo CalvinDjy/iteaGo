@@ -44,7 +44,7 @@ func (hs *HttpServer)Execute() {
 	route := NewRoute().Init(hs.Route)
 
 	//Get interceptor list
-	interceptorList := NewInterceptorManager(hs.Ioc).GetInterceptor()
+	interceptor := NewInterceptorManager(hs.Ioc).GetInterceptor()
 
 	//Create route manager
 	mux := http.NewServeMux()
@@ -66,15 +66,14 @@ func (hs *HttpServer)Execute() {
 
 			defer hs.output(w, &result)
 
-			interceptorArgs := []reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)}
-			for _, ins := range interceptorList {
-				err := ins[0].Call(interceptorArgs)[0].Interface()
+			args := []reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)}
+			for _, ins := range interceptor {
+				err := ins[0].Call(args)[0].Interface()
 				if err != nil {
 					result = reflect.ValueOf(err)
 					break
 				}
-				afterMethod := ins[1].Call(interceptorArgs)
-				defer afterMethod[0].Call([]reflect.Value{})
+				defer ins[1].Call(args)[0].Call([]reflect.Value{})
 			}
 
 			if result.Kind() == reflect.Invalid {
@@ -107,6 +106,7 @@ func (hs *HttpServer)start() {
 	}
 }
 
+//Http server stop
 func (hs *HttpServer)stop() {
 	for {
 		select {
@@ -123,6 +123,7 @@ func (hs *HttpServer)stop() {
 	}
 }
 
+//Http server output
 func (hs *HttpServer) output(w http.ResponseWriter, result *reflect.Value) {
 	if _, ok := (*result).Interface().(string); !ok {
 		buffer := bytes.NewBuffer([]byte{})

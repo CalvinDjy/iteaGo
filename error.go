@@ -1,58 +1,59 @@
 package itea
 
 type Error interface {
-	GetCode() 	int
-	GetError() 	string
+	Code() int
+	Error() string
 }
+
 
 type BusinessError struct {
-	Code 		int
-	Error 		string
+	C int
+	E string
 }
 
-func (be *BusinessError) GetCode() int {
-	return be.Code
+func (be *BusinessError) Code() int {
+	return be.C
 }
 
-func (be *BusinessError) GetError() string {
-	return be.Error
+func (be *BusinessError) Error() string {
+	return be.E
 }
 
 type DatabaseError struct {
-	Code 		int
-	Error 		string
+	C int
+	E string
 }
 
-func (be *DatabaseError) GetCode() int {
-	return be.Code
+func (de *DatabaseError) Code() int {
+	return de.C
 }
 
-func (be *DatabaseError) GetError() string {
-	return be.Error
+func (de *DatabaseError) Error() string {
+	return de.E
 }
 
 type ServerError struct {
-	Code 		int
-	Error 		string
+	C int
+	E string
 }
 
-func (be *ServerError) GetCode() int {
-	return be.Code
+func (se *ServerError) Code() int {
+	return se.C
 }
 
-func (be *ServerError) GetError() string {
-	return be.Error
+func (se *ServerError) Error() string {
+	return se.E
 }
 
 type ParamsError struct {
-	Code 		int
-	Error 		string
+	C int
+	E string
 }
 
-func (be *ParamsError) GetCode() int {
-	return be.Code
+func (pe *ParamsError) Code() int {
+	return pe.C
 }
 
-func (be *ParamsError) GetError() string {
-	return be.Error
+func (pe *ParamsError) Error() string {
+	return pe.E
 }
