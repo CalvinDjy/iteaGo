@@ -6,11 +6,10 @@ import (
 	"log"
 	"reflect"
 	"io"
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"fmt"
 	"context"
 	"sync"
-	"bytes"
 )
 
 const (
@@ -62,22 +61,29 @@ func (hs *HttpServer)Execute() {
 			hs.wg.Add(1)
 			//log.Println(r.Method)
 
-			var result reflect.Value
+			var result interface{}
 
 			defer hs.output(w, &result)
 
-			args := []reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)}
 			for _, ins := range interceptor {
-				err := ins[0].Call(args)[0].Interface()
+				err := ins[0].Call([]reflect.Value{reflect.ValueOf(r)})[0].Interface()
 				if err != nil {
 					result = reflect.ValueOf(err)
 					break
 				}
-				defer ins[1].Call(args)[0].Call([]reflect.Value{})
+				defer ins[1].Call([]reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)})[0].
+					Call([]reflect.Value{})
 			}
 
-			if result.Kind() == reflect.Invalid {
-				result = method.Call([]reflect.Value{reflect.ValueOf(r)})[0]
+			if reflect.ValueOf(result).Kind() == reflect.Invalid {
+				res := method.Call([]reflect.Value{reflect.ValueOf(r)});
+				if len(res) > 1 {
+					if _, ok := res[1].Interface().(error); ok {
+						result = res[1].Interface()
+						return
+					}
+				}
+				result = res[0].Interface()
 			}
 		})
 	}
@@ -124,15 +130,16 @@ func (hs *HttpServer)stop() {
 }
 
 //Http server output
-func (hs *HttpServer) output(w http.ResponseWriter, result *reflect.Value) {
-	if _, ok := (*result).Interface().(string); !ok {
-		buffer := bytes.NewBuffer([]byte{})
-		jsonEncoder := json.NewEncoder(buffer)
-		jsonEncoder.SetEscapeHTML(false)
-		jsonEncoder.Encode((*result).Interface())
-		io.WriteString(w, buffer.String())
+func (hs *HttpServer) output(w http.ResponseWriter, result *interface{}) {
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	if _, ok := (*result).(string); !ok {
+		r, err := json.Marshal(*result)
+		if err != nil {
+			log.Println(err)
+		}
+		io.WriteString(w, string(r))
 	} else {
-		io.WriteString(w, (*result).Interface().(string))
+		io.WriteString(w, (*result).(string))
 	}
 	hs.wg.Done()
 }

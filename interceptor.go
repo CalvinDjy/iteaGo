@@ -6,8 +6,8 @@ import (
 )
 
 type IInterceptor interface {
-	Enter(*http.Request, *reflect.Value) error
-	Exit(*http.Request, *reflect.Value) func()
+	Enter(*http.Request) error
+	Exit(*http.Request, *interface{}) func()
 }
 
 type InterceptorManager struct {
