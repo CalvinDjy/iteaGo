@@ -59,24 +59,35 @@ func (hs *HttpServer)Execute() {
 		mux.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request){
 
 			hs.wg.Add(1)
-			//log.Println(r.Method)
 
 			var result interface{}
-
+			rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
+			
 			defer hs.output(w, &result)
-
 			for _, ins := range interceptor {
-				err := ins[0].Call([]reflect.Value{reflect.ValueOf(r)})[0].Interface()
+				err := ins[0].Call([]reflect.Value{rr})[0].Interface()
 				if err != nil {
-					result = reflect.ValueOf(err)
+					result = reflect.ValueOf(err).Interface()
 					break
 				}
-				defer ins[1].Call([]reflect.Value{reflect.ValueOf(r), reflect.ValueOf(&result)})[0].
+				defer ins[1].Call([]reflect.Value{rr, rw, reflect.ValueOf(&result)})[0].
 					Call([]reflect.Value{})
 			}
-
+			
 			if reflect.ValueOf(result).Kind() == reflect.Invalid {
-				res := method.Call([]reflect.Value{reflect.ValueOf(r)});
+				n := method.Type().NumIn()
+				if n > 2 || n <= 0 {
+					panic("Action params must be (*http.Request) or (*http.Request, http.ResponseWriter)")
+				}
+
+				var p, res []reflect.Value
+				if n == 2 {
+					p = []reflect.Value{rr, rw};
+				} else {
+					p = []reflect.Value{rr};
+				}
+				res = method.Call(p);
+
 				if len(res) > 1 {
 					if _, ok := res[1].Interface().(error); ok {
 						result = res[1].Interface()

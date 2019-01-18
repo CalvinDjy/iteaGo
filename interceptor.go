@@ -7,7 +7,7 @@ import (
 
 type IInterceptor interface {
 	Enter(*http.Request) error
-	Exit(*http.Request, *interface{}) func()
+	Exit(*http.Request, http.ResponseWriter, *interface{}) func()
 }
 
 type InterceptorManager struct {
