@@ -131,7 +131,11 @@ func (hs *HttpServer)stop() {
 
 //Http server output
 func (hs *HttpServer) output(w http.ResponseWriter, result *interface{}) {
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	var json = jsoniter.Config{
+		EscapeHTML:             false,
+		SortMapKeys:            true,
+		ValidateJsonRawMessage: true,
+	}.Froze()
 	if _, ok := (*result).(string); !ok {
 		r, err := json.Marshal(*result)
 		if err != nil {
