@@ -3,6 +3,7 @@ package itea
 import (
 	"net/http"
 	"reflect"
+	"sort"
 )
 
 type IInterceptor interface {
@@ -21,15 +22,25 @@ func NewInterceptorManager(ioc *Ioc) *InterceptorManager {
 }
 
 func (im *InterceptorManager) GetInterceptor() [][]reflect.Value {
-	var ilist [][]reflect.Value
+	list := make(map[int][]reflect.Value)
+	var key []int
 	for _, t := range im.ioc.typeN {
 		if t.Implements(reflect.TypeOf(new(IInterceptor)).Elem()) {
 			v := reflect.ValueOf(im.ioc.GetInstanceByType(t))
-			ilist = append(ilist, []reflect.Value{
+			list[im.ioc.idT[t]] = []reflect.Value{
 				v.MethodByName("Enter"),
 				v.MethodByName("Exit"),
-			})
+			}
+			key = append(key, im.ioc.idT[t])
 		}
 	}
+
+	sort.Ints(key)
+	
+	var ilist [][]reflect.Value
+	for _, k := range key {
+		ilist = append(ilist, list[k])
+	}
+
 	return ilist
 }

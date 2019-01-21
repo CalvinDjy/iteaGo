@@ -28,9 +28,11 @@ type Ioc struct {
 	typeN 				map[string]reflect.Type
 	insN 				map[string]interface{}
 	insT 				map[reflect.Type]interface{}
+	idT					map[reflect.Type]int
 	imports				map[string]map[string]string
 	mutex 				*sync.Mutex
 	wg 					sync.WaitGroup
+	tid					int
 }
 
 //Create ioc
@@ -39,22 +41,43 @@ func NewIoc(ctx context.Context) (*Ioc) {
 	ioc := &Ioc{
 		ctx:ctx,
 		register:register,
-		typeN:register.Init(),
+		typeN:make(map[string]reflect.Type),
 		insN:make(map[string]interface{}),
 		insT:make(map[reflect.Type]interface{}),
+		idT:make(map[reflect.Type]int),
 		mutex:new(sync.Mutex),
 		imports:make(map[string]map[string]string),
+		tid:0,
 	}
+	
+	ioc.wg.Add(3)
+	
+	go func() {
+		if !strings.EqualFold(ctx.Value(DB_CONFIG).(string), "") {
+			ioc.registerDatabase(ctx.Value(DB_CONFIG).(string))
+		}
+		ioc.wg.Done()
+	}()
+	go func() {
 
-	if !strings.EqualFold(ctx.Value(DB_CONFIG).(string), "") {
-		ioc.wg.Add(1)
-		go ioc.registerDatabase(ctx.Value(DB_CONFIG).(string))
-	}
+		if len(ctx.Value(IMPORT_CONFIG).([]string)) != 0 {
+			ioc.importConfig(ctx.Value(IMPORT_CONFIG).([]string))
+		}
+		ioc.wg.Done()
+	}()
 
-	if len(ctx.Value(IMPORT_CONFIG).([]string)) != 0 {
-		ioc.wg.Add(1)
-		go ioc.importConfig(ctx.Value(IMPORT_CONFIG).([]string))
-	}
+	go func() {
+		tl := register.Init()
+		if len(tl) > 0 {
+			for _, t := range tl {
+				ioc.typeN[t.Name()] = t
+				ioc.tid++
+				ioc.idT[t] = ioc.tid
+			}
+		}
+		ioc.wg.Done()
+	}()
+
 	ioc.wg.Wait()
 
 	return ioc
@@ -74,7 +97,6 @@ func (ioc *Ioc) registerDatabase(dbConfig string) {
 	for k, v := range databases {
 		ioc.ctx = context.WithValue(ioc.ctx, k, v)
 	}
-	ioc.wg.Done()
 }
 
 //Import config
@@ -93,14 +115,17 @@ func (ioc *Ioc) importConfig(imports []string) {
 			ioc.imports[k] = v
 		}
 	}
-	ioc.wg.Done()
 }
 
 //Register beans
 func (ioc *Ioc) RegisterBeans(beans [] interface{}) {
-	m := ioc.register.Register(beans)
-	for n, t := range m {
-		ioc.typeN[n] = t
+	tl := ioc.register.Register(beans)
+	if len(tl) > 0 {
+		for _, t := range tl {
+			ioc.typeN[t.Name()] = t
+			ioc.tid++
+			ioc.idT[t] = ioc.tid
+		}
 	}
 }
 

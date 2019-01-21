@@ -26,24 +26,15 @@ func NewRegister() (c *Register) {
 }
 
 //Init system beans
-func (r *Register)Init() map[string] reflect.Type {
-	m := make(map[string] reflect.Type)
-	list := append(process(), module()...)
-	var t reflect.Type
-	for _, v := range list {
-		t = reflect.TypeOf(v)
-		m[t.Name()] = t
-	}
-	return m
+func (r *Register)Init() []reflect.Type {
+	return r.Register(append(process(), module()...))
 }
 
 //Register beans
-func (r *Register)Register(beans [] interface{}) map[string] reflect.Type {
-	m := make(map[string] reflect.Type)
-	var t reflect.Type
+func (r *Register)Register(beans [] interface{}) [] reflect.Type {
+	var l []reflect.Type
 	for _, v := range beans {
-		t = reflect.TypeOf(v)
-		m[t.Name()] = t
+		l = append(l, reflect.TypeOf(v))
 	}
-	return m
+	return l
 }
