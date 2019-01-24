@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"context"
 	"sync"
+	"strings"
 )
 
 const (
@@ -43,7 +44,7 @@ func (hs *HttpServer)Execute() {
 	route := NewRoute().Init(hs.Route)
 
 	//Get interceptor list
-	interceptor := NewInterceptorManager(hs.Ioc).GetInterceptor()
+	interceptor := GetInterceptor(hs.Ioc)
 
 	//Create route manager
 	mux := http.NewServeMux()
@@ -51,7 +52,7 @@ func (hs *HttpServer)Execute() {
 	for u, a := range route.Actions {
 		uri, action := u, a
 		method := reflect.ValueOf(hs.Ioc.GetInstanceByName(action.Controller)).MethodByName(action.Action)
-
+		
 		if !method.IsValid() {
 			log.Println("Can not find method [", action.Action, "] in [", action.Controller, "]")
 		}
@@ -72,6 +73,10 @@ func (hs *HttpServer)Execute() {
 				}
 				defer ins[1].Call([]reflect.Value{rr, rw, reflect.ValueOf(&result)})[0].
 					Call([]reflect.Value{})
+			}
+			
+			if !strings.EqualFold(r.Method, action.Method) {
+				result = NewServerError("Method not allowed")
 			}
 			
 			if reflect.ValueOf(result).Kind() == reflect.Invalid {

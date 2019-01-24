@@ -11,27 +11,17 @@ type IInterceptor interface {
 	Exit(*http.Request, http.ResponseWriter, *interface{}) func()
 }
 
-type InterceptorManager struct {
-	ioc *Ioc
-}
-
-func NewInterceptorManager(ioc *Ioc) *InterceptorManager {
-	return &InterceptorManager{
-		ioc: ioc,
-	}
-}
-
-func (im *InterceptorManager) GetInterceptor() [][]reflect.Value {
+func GetInterceptor(ioc *Ioc) [][]reflect.Value {
 	list := make(map[int][]reflect.Value)
 	var key []int
-	for _, t := range im.ioc.typeN {
+	for _, t := range ioc.typeN {
 		if t.Implements(reflect.TypeOf(new(IInterceptor)).Elem()) {
-			v := reflect.ValueOf(im.ioc.GetInstanceByType(t))
-			list[im.ioc.idT[t]] = []reflect.Value{
+			v := reflect.ValueOf(ioc.GetInstanceByType(t))
+			list[ioc.idT[t]] = []reflect.Value{
 				v.MethodByName("Enter"),
 				v.MethodByName("Exit"),
 			}
-			key = append(key, im.ioc.idT[t])
+			key = append(key, ioc.idT[t])
 		}
 	}
 

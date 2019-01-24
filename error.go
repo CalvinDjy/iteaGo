@@ -1,59 +1,55 @@
 package itea
 
-type Error interface {
-	Code() int
-	Error() string
-}
-
-
-type BusinessError struct {
-	C int
-	E string
-}
-
-func (be *BusinessError) Code() int {
-	return be.C
-}
-
-func (be *BusinessError) Error() string {
-	return be.E
-}
-
 type DatabaseError struct {
-	C int
-	E string
-}
-
-func (de *DatabaseError) Code() int {
-	return de.C
+	error string
 }
 
 func (de *DatabaseError) Error() string {
-	return de.E
+	return de.error
+}
+
+func (de *DatabaseError) setError(err string) {
+	de.error = err
 }
 
 type ServerError struct {
-	C int
-	E string
-}
-
-func (se *ServerError) Code() int {
-	return se.C
+	error string
 }
 
 func (se *ServerError) Error() string {
-	return se.E
+	return se.error
+}
+
+func (se *ServerError) setError(err string) {
+	se.error = err
 }
 
 type ParamsError struct {
-	C int
-	E string
-}
-
-func (pe *ParamsError) Code() int {
-	return pe.C
+	error string
 }
 
 func (pe *ParamsError) Error() string {
-	return pe.E
+	return pe.error
+}
+
+func (pe *ParamsError) setError(err string) {
+	pe.error = err
+}
+
+func NewDatabaseError(err string) *DatabaseError{
+	e := &DatabaseError{}
+	e.setError(err)
+	return e
+}
+
+func NewServerError(err string) *ServerError{
+	e := &ServerError{}
+	e.setError(err)
+	return e
+}
+
+func NewParamsError(err string) *ParamsError{
+	e := &ParamsError{}
+	e.setError(err)
+	return e
 }
