@@ -109,7 +109,7 @@ func (p *Redis) Get(key string) (value string, err error) {
 	defer func() {
 		log.Println("【Redis Get】耗时：", time.Since(start))
 	}()
-	return p.pool.Get(key).String(), nil
+	return p.pool.Get(key).Val(), nil
 }
 
 func (p *Redis) Expire(key string, expire int) (reply interface{}, err error) {
