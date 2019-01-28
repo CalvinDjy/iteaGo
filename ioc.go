@@ -13,6 +13,9 @@ const (
 	PROCESS_CONFIG 	= "process"
 	DB_CONFIG 		= "database"
 	IMPORT_CONFIG 	= "@import"
+	DEBUG			= "debug"
+	CONNECTION_CONFIG		= "connections"
+	REDIS_CONFIG			= "redis"
 
 	NAME_KEY 		= "Name"
 	IOC_KEY 		= "Ioc"

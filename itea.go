@@ -48,6 +48,7 @@ func New(appConfig string) *Itea {
 	wg.Wait()
 
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
+		ctx = context.WithValue(ctx, DEBUG, false)
 		return &Itea{
 			beans: process,
 			ioc: NewIoc(ctx),
@@ -58,13 +59,20 @@ func New(appConfig string) *Itea {
 
 }
 
+//Debug
+func (i *Itea) Debug() *Itea {
+	i.ioc.ctx = context.WithValue(i.ioc.ctx, DEBUG, true)
+	return i
+}
+
 //Register beans
-func (i *Itea) Register(beans ...[] interface{}) {
+func (i *Itea) Register(beans ...[] interface{}) *Itea {
 	var beanList [] interface{}
 	for _, bean := range beans{
 		beanList = append(beanList, bean...)
 	}
 	i.ioc.RegisterBeans(beanList)
+	return i
 }
 
 //Start Itea

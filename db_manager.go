@@ -26,7 +26,7 @@ type DbManager struct {
 
 func (dm *DbManager) Construct() {
 	var conf map[string]DatabaseConf
-	if c := dm.Ctx.Value("connections").(*json.RawMessage); c != nil {
+	if c := dm.Ctx.Value(CONNECTION_CONFIG).(*json.RawMessage); c != nil {
 		err := json.Unmarshal(*c, &conf)
 		if err != nil {
 			panic(err)

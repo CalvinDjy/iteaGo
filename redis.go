@@ -25,11 +25,14 @@ const (
 type Redis struct {
 	pool *redis.Client
 	Ctx context.Context
+	debug bool
 }
 
 func (p *Redis) Construct() {
+	p.debug = p.Ctx.Value(DEBUG).(bool)
+	
 	var conf RedisConf
-	if c := p.Ctx.Value("redis").(*json.RawMessage); c != nil {
+	if c := p.Ctx.Value(REDIS_CONFIG).(*json.RawMessage); c != nil {
 		err := json.Unmarshal(*c, &conf)
 		if err != nil {
 			panic(err)
@@ -96,27 +99,33 @@ func (p *Redis) initOpt(conf RedisConf) *redis.Options {
 }
 
 func (p *Redis) Setex(key string, value string, expire int) (reply interface{}, err error) {
-	start := time.Now()
-	defer func() {
-		log.Println("【Redis Setex】耗时：", time.Since(start))
-	}()
+	if p.debug {
+		start := time.Now()
+		defer func() {
+			log.Println("【Redis Setex】耗时：", time.Since(start))
+		}()
+	}
 	p.pool.Set(key, value, time.Duration(expire) * time.Second)
 	return nil, nil
 }
 
 func (p *Redis) Get(key string) (value string, err error) {
-	start := time.Now()
-	defer func() {
-		log.Println("【Redis Get】耗时：", time.Since(start))
-	}()
+	if p.debug {
+		start := time.Now()
+		defer func() {
+			log.Println("【Redis Get】耗时：", time.Since(start))
+		}()
+	}
 	return p.pool.Get(key).Val(), nil
 }
 
 func (p *Redis) Expire(key string, expire int) (reply interface{}, err error) {
-	start := time.Now()
-	defer func() {
-		log.Println("【Redis Expire】耗时：", time.Since(start))
-	}()
+	if p.debug {
+		start := time.Now()
+		defer func() {
+			log.Println("【Redis Expire】耗时：", time.Since(start))
+		}()
+	}
 	p.pool.Expire(key, time.Duration(expire) * time.Second)
 	return nil, nil
 }
