@@ -8,7 +8,7 @@ import (
 
 type IInterceptor interface {
 	Enter(*http.Request) error
-	Exit(*http.Request, http.ResponseWriter, *interface{}) func()
+	Exit(*http.Request, *interface{})
 }
 
 func GetInterceptor(ioc *Ioc) [][]reflect.Value {

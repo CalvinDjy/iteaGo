@@ -32,7 +32,7 @@ type HttpServer struct {
 }
 
 //Http server init
-func (hs *HttpServer)Execute() {
+func (hs *HttpServer) Execute() {
 
 	//Create http server
 	hs.ser = &http.Server{
@@ -65,14 +65,14 @@ func (hs *HttpServer)Execute() {
 			rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
 			
 			defer hs.output(w, &result)
+
 			for _, ins := range interceptor {
 				err := ins[0].Call([]reflect.Value{rr})[0].Interface()
 				if err != nil {
 					result = reflect.ValueOf(err).Interface()
 					break
 				}
-				defer ins[1].Call([]reflect.Value{rr, rw, reflect.ValueOf(&result)})[0].
-					Call([]reflect.Value{})
+				defer ins[1].Call([]reflect.Value{rr, reflect.ValueOf(&result)})
 			}
 			
 			if !strings.EqualFold(r.Method, action.Method) {

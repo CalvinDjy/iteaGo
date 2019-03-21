@@ -11,6 +11,7 @@ type Register struct {
 func process() []interface{} {
 	return [] interface{}{
 		HttpServer{},
+		ThriftServer{},
 	}
 }
 
