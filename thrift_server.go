@@ -8,13 +8,16 @@ import (
 )
 
 type ThriftServer struct {
+	Name   			string
 	Ip				string
 	Port 			string
 	Processor 		[]interface{}
 	Ctx             context.Context
 	Ioc 			*Ioc
+	ser 			*thrift.TSimpleServer
 }
 
+//Thrift server start
 func (ts *ThriftServer) Execute() {
 
 	addr := fmt.Sprintf("%s:%s", ts.Ip, ts.Port)
@@ -22,7 +25,7 @@ func (ts *ThriftServer) Execute() {
 	serverTransport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
 		log.Println(err)
-		return
+		panic(err)
 	}
 	
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
@@ -35,16 +38,34 @@ func (ts *ThriftServer) Execute() {
 		if _, ok := processor.(IProcessor); ok {
 			p := processor.(IProcessor)
 			multiProcess.RegisterProcessor(p.Name(), p.Processor())
-			log.Println("---- Register thrift processor [", p.Name(), "] ----")
+			log.Println("--- Register thrift processor [", p.Name(), "] ---")
 		}
 	}
 
-	server := thrift.NewTSimpleServer4(multiProcess, serverTransport, transportFactory, protocolFactory)
-	log.Print("Starting server... on ", addr)
-	err = server.Serve()
+	ts.ser = thrift.NewTSimpleServer4(multiProcess, serverTransport, transportFactory, protocolFactory)
+	
+	go ts.stop()
+	
+	log.Print("=== Thrift server [", ts.Name, "] start [", addr, "] ===")
+	err = ts.ser.Serve()
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	
+}
+
+//Thrift server stop
+func (ts *ThriftServer)stop() {
+	for {
+		select {
+		case <-	ts.Ctx.Done():
+			log.Println("Thrift server stop ...")
+			ts.ser.Stop()
+			log.Println("Thrift server stop success")
+			return
+		default:
+			break
+		}
+	}
 }
