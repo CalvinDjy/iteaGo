@@ -4,19 +4,29 @@ import (
 	"os"
 	"io/ioutil"
 	"encoding/json"
+	"context"
+	"strings"
+)
+
+const (
+	ENV 		= "env"
+	SEARCH_ENV  = "{env}"
+	DEFAULT_ENV	= "dev"
 )
 
 type Config struct {
-	projectPath string
-	conf map[string]*json.RawMessage
+	projectPath 	string
+	env 			string
+	conf 			map[string]*json.RawMessage
 }
 
-func InitConf(appConfig string) *Config {
+func InitConf(ctx context.Context, appConfig string) *Config {
 	projectPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-	dat, err := ioutil.ReadFile(projectPath + appConfig)
+	env := ctx.Value(ENV).(string)
+	dat, err := ioutil.ReadFile(projectPath + strings.Replace(appConfig, SEARCH_ENV, env, -1))
 	if err != nil {
 		panic("Application config not find")
 	}
@@ -26,8 +36,9 @@ func InitConf(appConfig string) *Config {
 		panic("Application config extract error")
 	}
 	return &Config{
-		projectPath:projectPath,
-		conf:conf,
+		projectPath: projectPath,
+		env: env,
+		conf: conf,
 	}
 }
 
@@ -35,7 +46,7 @@ func (c *Config) Path(name string) string{
 	if v, ok := c.conf[name]; ok {
 		var s string
 		json.Unmarshal(*v, &s)
-		return c.projectPath + s
+		return c.projectPath + strings.Replace(s, SEARCH_ENV, c.env, -1)
 	}
 	return ""
 }
@@ -46,7 +57,7 @@ func (c *Config) PathList(name string) []string{
 		json.Unmarshal(*v, &sl)
 		if sl != nil {
 			for i, _ := range sl {
-				sl[i] = c.projectPath + sl[i]
+				sl[i] = c.projectPath + strings.Replace(sl[i], SEARCH_ENV, c.env, -1)
 			}
 		}
 		return sl

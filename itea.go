@@ -1,7 +1,6 @@
 package itea
 
 import (
-	"encoding/json"
 	"sync"
 	"os"
 	"context"
@@ -13,10 +12,11 @@ var (
 	sigs 	chan os.Signal
 	s		chan bool
 	mutex 	*sync.Mutex
+	ctx		context.Context
+	conf	*Config
 )
 
 type Itea struct {
-	config 	map[string]*json.RawMessage
 	beans 	[]Bean
 	ioc 	*Ioc
 }
@@ -24,27 +24,13 @@ type Itea struct {
 //Create Itea
 func New(appConfig string) *Itea {
 
-	conf := InitConf(appConfig)
-	ctx := context.Background()
 	mutex = new(sync.Mutex)
+	ctx = context.WithValue(context.Background(), ENV, env())
+	conf = InitConf(ctx, appConfig)
 
 	wg.Add(2)
-	go func() {
-		if d := conf.Path(DB_CONFIG); d != "" {
-			mutex.Lock()
-			ctx = context.WithValue(ctx, DB_CONFIG, d)
-			mutex.Unlock()
-		}
-		wg.Done()
-	}()
-	go func() {
-		if i := conf.PathList(IMPORT_CONFIG); i != nil {
-			mutex.Lock()
-			ctx = context.WithValue(ctx, IMPORT_CONFIG, i)
-			mutex.Unlock()
-		}
-		wg.Done()
-	}()
+	go dbConfig()
+	go importConfig()
 	wg.Wait()
 
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
@@ -57,6 +43,35 @@ func New(appConfig string) *Itea {
 		panic("Can not find config of process")
 	}
 
+}
+
+//Env
+func env() string {
+	num := len(os.Args)
+	if num > 1 {
+		return os.Args[1]
+	}
+	return DEFAULT_ENV
+}
+
+//Extract db config
+func dbConfig() {
+	if d := conf.Path(DB_CONFIG); d != "" {
+		mutex.Lock()
+		ctx = context.WithValue(ctx, DB_CONFIG, d)
+		mutex.Unlock()
+	}
+	wg.Done()
+}
+
+//Extract import config
+func importConfig() {
+	if i := conf.PathList(IMPORT_CONFIG); i != nil {
+		mutex.Lock()
+		ctx = context.WithValue(ctx, IMPORT_CONFIG, i)
+		mutex.Unlock()
+	}
+	wg.Done()
 }
 
 //Debug
@@ -78,7 +93,7 @@ func (i *Itea) Register(beans ...[] interface{}) *Itea {
 //Start Itea
 func (i *Itea) Start() {
 	go logProcessInfo()
-	sigs = make(chan os.Signal)
+
 	s = make(chan bool)
 
 	wg.Add(1)
@@ -87,7 +102,7 @@ func (i *Itea) Start() {
 		wg.Done()
 	}()
 
-	ctx, stop := context.WithCancel(context.Background())
+	ctx, stop := context.WithCancel(i.ioc.ctx)
 	go func() {
 		if <-s {
 			log.Println("Itea stop ...")

@@ -14,6 +14,7 @@ func logProcessInfo() {
 }
 
 func processSignal() {
+	sigs = make(chan os.Signal)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL,syscall.SIGUSR1, syscall.SIGUSR2, os.Interrupt)
 	for{
 		msg := <-sigs

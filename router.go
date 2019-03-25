@@ -17,16 +17,12 @@ type action struct {
 	Action 		string
 }
 
-func NewRoute() (r *Route) {
-	return &Route{}
-}
-
-func (r *Route)Init(routeConfig string) (route *Route){
+func (r *Route)Init(routeConfig string, env string) (route *Route){
 	projectPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-	data, err := ioutil.ReadFile(projectPath + routeConfig)
+	data, err := ioutil.ReadFile(projectPath + strings.Replace(routeConfig, SEARCH_ENV, env, -1))
 	if err != nil {
 		panic("Route config not find")
 	}

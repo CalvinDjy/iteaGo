@@ -62,7 +62,6 @@ func NewIoc(ctx context.Context) (*Ioc) {
 		ioc.wg.Done()
 	}()
 	go func() {
-
 		if len(ctx.Value(IMPORT_CONFIG).([]string)) != 0 {
 			ioc.importConfig(ctx.Value(IMPORT_CONFIG).([]string))
 		}
@@ -90,7 +89,7 @@ func NewIoc(ctx context.Context) (*Ioc) {
 func (ioc *Ioc) registerDatabase(dbConfig string) {
 	dat, err := ioutil.ReadFile(dbConfig)
 	if err != nil {
-		panic(err)
+		panic("[" + dbConfig + "] config not find")
 	}
 	var databases map[string]*json.RawMessage
 	err = json.Unmarshal(dat, &databases)

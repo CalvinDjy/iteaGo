@@ -27,6 +27,7 @@ type HttpServer struct {
 	Route			string
 	Ctx             context.Context
 	Ioc 			*Ioc
+	router			Route
 	ser 			*http.Server
 	wg 				sync.WaitGroup
 }
@@ -41,7 +42,7 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	route := NewRoute().Init(hs.Route)
+	route := hs.router.Init(hs.Route, hs.Ctx.Value(ENV).(string))
 
 	//Get interceptor list
 	interceptor := GetInterceptor(hs.Ioc)
@@ -134,7 +135,7 @@ func (hs *HttpServer)stop() {
 		select {
 		case <-	hs.Ctx.Done():
 			log.Println("Http server stop ...")
-			log.Println("Wait for all requests return ...")
+			log.Println("Wait for all http requests return ...")
 			hs.wg.Wait()
 			hs.ser.Shutdown(hs.Ctx)
 			log.Println("Http server stop success")

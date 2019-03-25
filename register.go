@@ -17,7 +17,7 @@ func process() []interface{} {
 
 func module() []interface{} {
 	return [] interface{}{
-
+		Route{},
 	}
 }
 
