@@ -3,14 +3,14 @@
 package itea
 
 import (
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"os"
-	"syscall"
 	"os/signal"
+	"syscall"
 )
 
 func logProcessInfo() {
-	log.Println("windows pid : ", os.Getpid())
+	ilog.Info("windows pid : ", os.Getpid())
 }
 
 func processSignal() {
@@ -20,13 +20,13 @@ func processSignal() {
 		msg := <-sigs
 		switch msg {
 		default:
-			log.Println("[windows] default: ", msg)
+			ilog.Info("[windows] default: ", msg)
 			//case syscall.SIG:
 			//reload
 			//b.App.Reload(b.Conf)
 			break
 		case syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM:
-			log.Println("[windows]", msg)
+			ilog.Info("[windows]", msg)
 			signal.Stop(sigs)
 			s <- true
 			return

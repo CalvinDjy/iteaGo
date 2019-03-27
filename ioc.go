@@ -13,6 +13,7 @@ const (
 	PROCESS_CONFIG 	= "process"
 	DB_CONFIG 		= "database"
 	IMPORT_CONFIG 	= "@import"
+	LOG_CONFIG 		= "log"
 	DEBUG			= "debug"
 	CONNECTION_CONFIG		= "connections"
 	REDIS_CONFIG			= "redis"
@@ -39,7 +40,7 @@ type Ioc struct {
 }
 
 //Create ioc
-func NewIoc(ctx context.Context) (*Ioc) {
+func NewIoc() (*Ioc) {
 	register := NewRegister()
 	ioc := &Ioc{
 		ctx:ctx,
@@ -53,22 +54,17 @@ func NewIoc(ctx context.Context) (*Ioc) {
 		tid:0,
 	}
 	
-	ioc.wg.Add(3)
+	ioc.wg.Add(2)
 	
 	go func() {
-		if !strings.EqualFold(ctx.Value(DB_CONFIG).(string), "") {
-			ioc.registerDatabase(ctx.Value(DB_CONFIG).(string))
+		defer ioc.wg.Done()
+		if len(conf.Config(IMPORT_CONFIG).([]string)) != 0 {
+			ioc.importConfig(conf.Config(IMPORT_CONFIG).([]string))
 		}
-		ioc.wg.Done()
-	}()
-	go func() {
-		if len(ctx.Value(IMPORT_CONFIG).([]string)) != 0 {
-			ioc.importConfig(ctx.Value(IMPORT_CONFIG).([]string))
-		}
-		ioc.wg.Done()
 	}()
 
 	go func() {
+		defer ioc.wg.Done()
 		tl := register.Init()
 		if len(tl) > 0 {
 			for _, t := range tl {
@@ -77,28 +73,11 @@ func NewIoc(ctx context.Context) (*Ioc) {
 				ioc.idT[t] = ioc.tid
 			}
 		}
-		ioc.wg.Done()
 	}()
 
 	ioc.wg.Wait()
 
 	return ioc
-}
-
-//Register database config
-func (ioc *Ioc) registerDatabase(dbConfig string) {
-	dat, err := ioutil.ReadFile(dbConfig)
-	if err != nil {
-		panic("[" + dbConfig + "] config not find")
-	}
-	var databases map[string]*json.RawMessage
-	err = json.Unmarshal(dat, &databases)
-	if err != nil {
-		panic(err)
-	}
-	for k, v := range databases {
-		ioc.ctx = context.WithValue(ioc.ctx, k, v)
-	}
 }
 
 //Import config
@@ -137,10 +116,10 @@ func (ioc *Ioc) InitProcess(ctx context.Context, bean Bean) {
 
 	ioc.wg.Add(1)
 	go func() {
+		defer ioc.wg.Done()
 		for k, v := range bean.Params {
 			setField(p, k, v)
 		}
-		ioc.wg.Done()
 	}()
 
 	setField(p, NAME_KEY, bean.Name)

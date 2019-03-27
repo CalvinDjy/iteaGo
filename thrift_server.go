@@ -1,7 +1,7 @@
 package itea
 
 import (
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"context"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
@@ -24,7 +24,7 @@ func (ts *ThriftServer) Execute() {
 
 	serverTransport, err := thrift.NewTServerSocket(addr)
 	if err != nil {
-		log.Println(err)
+		ilog.Info(err)
 		panic(err)
 	}
 	
@@ -38,18 +38,18 @@ func (ts *ThriftServer) Execute() {
 		if _, ok := processor.(IProcessor); ok {
 			p := processor.(IProcessor)
 			multiProcess.RegisterProcessor(p.Name(), p.Processor())
-			log.Println("--- Register thrift processor [", p.Name(), "] ---")
+			ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
 		}
 	}
 
 	ts.ser = thrift.NewTSimpleServer4(multiProcess, serverTransport, transportFactory, protocolFactory)
 	
 	go ts.stop()
-	
-	log.Print("=== Thrift server [", ts.Name, "] start [", addr, "] ===")
+
+	ilog.Info("=== Thrift server [", ts.Name, "] start [", addr, "] ===")
 	err = ts.ser.Serve()
 	if err != nil {
-		log.Println(err)
+		ilog.Error(err)
 		return
 	}
 	
@@ -60,9 +60,9 @@ func (ts *ThriftServer)stop() {
 	for {
 		select {
 		case <-	ts.Ctx.Done():
-			log.Println("Thrift server stop ...")
+			ilog.Info("Thrift server stop ...")
 			ts.ser.Stop()
-			log.Println("Thrift server stop success")
+			ilog.Info("Thrift server stop success")
 			return
 		default:
 			break

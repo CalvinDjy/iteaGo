@@ -1,10 +1,10 @@
 package itea
 
 import (
-	"sync"
-	"os"
 	"context"
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
+	"os"
+	"sync"
 )
 
 var (
@@ -23,26 +23,19 @@ type Itea struct {
 
 //Create Itea
 func New(appConfig string) *Itea {
-
 	mutex = new(sync.Mutex)
 	ctx = context.WithValue(context.Background(), ENV, env())
-	conf = InitConf(ctx, appConfig)
-
-	wg.Add(2)
-	go dbConfig()
-	go importConfig()
-	wg.Wait()
+	conf = InitConf(appConfig)
 
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
 		ctx = context.WithValue(ctx, DEBUG, false)
 		return &Itea{
 			beans: process,
-			ioc: NewIoc(ctx),
+			ioc: NewIoc(),
 		}
 	} else {
 		panic("Can not find config of process")
 	}
-
 }
 
 //Env
@@ -54,29 +47,9 @@ func env() string {
 	return DEFAULT_ENV
 }
 
-//Extract db config
-func dbConfig() {
-	if d := conf.Path(DB_CONFIG); d != "" {
-		mutex.Lock()
-		ctx = context.WithValue(ctx, DB_CONFIG, d)
-		mutex.Unlock()
-	}
-	wg.Done()
-}
-
-//Extract import config
-func importConfig() {
-	if i := conf.PathList(IMPORT_CONFIG); i != nil {
-		mutex.Lock()
-		ctx = context.WithValue(ctx, IMPORT_CONFIG, i)
-		mutex.Unlock()
-	}
-	wg.Done()
-}
-
 //Debug
 func (i *Itea) Debug() *Itea {
-	i.ioc.ctx = context.WithValue(i.ioc.ctx, DEBUG, true)
+	ctx = context.WithValue(ctx, DEBUG, true)
 	return i
 }
 
@@ -92,20 +65,21 @@ func (i *Itea) Register(beans ...[] interface{}) *Itea {
 
 //Start Itea
 func (i *Itea) Start() {
+	InitLog()
 	go logProcessInfo()
 
 	s = make(chan bool)
 
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		processSignal()
-		wg.Done()
 	}()
 
-	ctx, stop := context.WithCancel(i.ioc.ctx)
+	ctx, stop := context.WithCancel(ctx)
 	go func() {
 		if <-s {
-			log.Println("Itea stop ...")
+			ilog.Info("Itea stop ...")
 			stop()
 		}
 	}()
@@ -113,12 +87,16 @@ func (i *Itea) Start() {
 		var process = p
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			i.ioc.InitProcess(ctx, process)
-			wg.Done()
 		}()
 	}
 	wg.Wait()
 
-	log.Println("Itea stop success. Good bye ")
-	os.Exit(0)
+	ilog.Info("Itea stop success. Good bye ")
+
+	if ilog.Done() {
+		os.Exit(0)
+	}
+
 }

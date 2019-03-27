@@ -3,7 +3,7 @@ package itea
 import (
 	"github.com/go-redis/redis"
 	"time"
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"fmt"
 	"context"
 	"encoding/json"
@@ -31,9 +31,9 @@ type Redis struct {
 func (p *Redis) Construct() {
 	p.debug = p.Ctx.Value(DEBUG).(bool)
 	
-	var conf RedisConf
-	if c := p.Ctx.Value(REDIS_CONFIG).(*json.RawMessage); c != nil {
-		err := json.Unmarshal(*c, &conf)
+	var redisConf RedisConf
+	if c := conf.Config(REDIS_CONFIG).(*json.RawMessage); c != nil {
+		err := json.Unmarshal(*c, &redisConf)
 		if err != nil {
 			panic(err)
 		}
@@ -41,7 +41,7 @@ func (p *Redis) Construct() {
 		panic("Can not find database config of redis!")
 	}
 
-	redisPool := redis.NewClient(p.initOpt(conf))
+	redisPool := redis.NewClient(p.initOpt(redisConf))
 
 	p.pool = redisPool
 
@@ -102,7 +102,7 @@ func (p *Redis) Setex(key string, value string, expire int) (reply interface{}, 
 	if p.debug {
 		start := time.Now()
 		defer func() {
-			log.Println("【Redis Setex】耗时：", time.Since(start))
+			ilog.Info("【Redis Setex】耗时：", time.Since(start))
 		}()
 	}
 	p.pool.Set(key, value, time.Duration(expire) * time.Second)
@@ -113,7 +113,7 @@ func (p *Redis) Get(key string) (value string, err error) {
 	if p.debug {
 		start := time.Now()
 		defer func() {
-			log.Println("【Redis Get】耗时：", time.Since(start))
+			ilog.Info("【Redis Get】耗时：", time.Since(start))
 		}()
 	}
 	return p.pool.Get(key).Val(), nil
@@ -123,7 +123,7 @@ func (p *Redis) Expire(key string, expire int) (reply interface{}, err error) {
 	if p.debug {
 		start := time.Now()
 		defer func() {
-			log.Println("【Redis Expire】耗时：", time.Since(start))
+			ilog.Info("【Redis Expire】耗时：", time.Since(start))
 		}()
 	}
 	p.pool.Expire(key, time.Duration(expire) * time.Second)

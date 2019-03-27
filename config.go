@@ -1,11 +1,11 @@
 package itea
 
 import (
-	"os"
-	"io/ioutil"
 	"encoding/json"
-	"context"
+	"io/ioutil"
+	"os"
 	"strings"
+	"sync"
 )
 
 const (
@@ -18,9 +18,11 @@ type Config struct {
 	projectPath 	string
 	env 			string
 	conf 			map[string]*json.RawMessage
+	confMap			map[string]interface{}
+	wg				sync.WaitGroup
 }
 
-func InitConf(ctx context.Context, appConfig string) *Config {
+func InitConf(appConfig string) *Config {
 	projectPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -35,32 +37,76 @@ func InitConf(ctx context.Context, appConfig string) *Config {
 	if err != nil {
 		panic("Application config extract error")
 	}
-	return &Config{
+	config := &Config{
 		projectPath: projectPath,
 		env: env,
 		conf: conf,
+		confMap: make(map[string]interface{}),
 	}
+	config.wg.Add(3)
+	go config.dbConfig()
+	go config.importConfig()
+	go config.logConfig()
+	config.wg.Wait()
+	return config
 }
 
-func (c *Config) Path(name string) string{
-	if v, ok := c.conf[name]; ok {
+//Extract database config
+func (c *Config) dbConfig() {
+	defer c.wg.Done()
+	if v, ok := c.conf[DB_CONFIG]; ok {
 		var s string
 		json.Unmarshal(*v, &s)
-		return c.projectPath + strings.Replace(s, SEARCH_ENV, c.env, -1)
+		path := c.projectPath + strings.Replace(s, SEARCH_ENV, c.env, -1)
+		dat, err := ioutil.ReadFile(path)
+		if err != nil {
+			panic("[" + path + "] config not find")
+		}
+		var databases map[string]*json.RawMessage
+		err = json.Unmarshal(dat, &databases)
+		if err != nil {
+			panic(err)
+		}
+		for k, v := range databases {
+			mutex.Lock()
+			c.confMap[k] = v
+			mutex.Unlock()
+		}
 	}
-	return ""
 }
 
-func (c *Config) PathList(name string) []string{
-	if v, ok := c.conf[name]; ok {
-		var sl []string
-		json.Unmarshal(*v, &sl)
-		if sl != nil {
-			for i, _ := range sl {
-				sl[i] = c.projectPath + strings.Replace(sl[i], SEARCH_ENV, c.env, -1)
+//Extract import config
+func (c *Config) importConfig() {
+	defer c.wg.Done()
+	if v, ok := c.conf[IMPORT_CONFIG]; ok {
+		var pathList []string
+		json.Unmarshal(*v, &pathList)
+		if pathList != nil {
+			for i, _ := range pathList {
+				pathList[i] = c.projectPath + strings.Replace(pathList[i], SEARCH_ENV, c.env, -1)
 			}
+			mutex.Lock()
+			c.confMap[IMPORT_CONFIG] = pathList
+			mutex.Unlock()
 		}
-		return sl
+	}
+}
+
+//Extract log config
+func (c *Config) logConfig() {
+	defer c.wg.Done()
+	if v, ok := c.conf[LOG_CONFIG]; ok {
+		var log map[string]interface{}
+		json.Unmarshal(*v, &log)
+		mutex.Lock()
+		c.confMap[LOG_CONFIG] = log
+		mutex.Unlock()
+	}
+}
+
+func (c *Config) Config(name string) interface{} {
+	if v, ok := c.confMap[name]; ok {
+		return v
 	}
 	return nil
 }

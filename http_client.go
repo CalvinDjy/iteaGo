@@ -6,7 +6,7 @@ import (
 	"strings"
 	"net/url"
 	"time"
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 )
 
 type HttpClient struct {
@@ -16,7 +16,7 @@ type HttpClient struct {
 func (c *HttpClient) Get(u string, h map[string]string, host string) (result []byte, err error) {
 	start := time.Now()
 	defer func() {
-		log.Println("【GET请求】耗时：", time.Since(start), ", 请求地址[", u,"]")
+		ilog.Info("【GET请求】耗时：", time.Since(start), ", 请求地址[", u,"]")
 	}()
 
 	client := &http.Client{}
@@ -50,7 +50,7 @@ func (c *HttpClient) Get(u string, h map[string]string, host string) (result []b
 func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string) (result []byte, err error) {
 	start := time.Now()
 	defer func() {
-		log.Println("【POST请求】耗时：", time.Since(start), ", 请求地址[", u,"]")
+		ilog.Info("【POST请求】耗时：", time.Since(start), ", 请求地址[", u,"]")
 	}()
 	postParams := url.Values{}
 	for k, v := range p {

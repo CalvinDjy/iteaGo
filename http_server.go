@@ -3,7 +3,7 @@ package itea
 import (
 	"net/http"
 	"time"
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"reflect"
 	"io"
 	"github.com/json-iterator/go"
@@ -55,7 +55,7 @@ func (hs *HttpServer) Execute() {
 		method := reflect.ValueOf(hs.Ioc.GetInstanceByName(action.Controller)).MethodByName(action.Action)
 		
 		if !method.IsValid() {
-			log.Println("Can not find method [", action.Action, "] in [", action.Controller, "]")
+			ilog.Error("Can not find method [", action.Action, "] in [", action.Controller, "]")
 		}
 
 		mux.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request){
@@ -122,10 +122,10 @@ func (hs *HttpServer)start() {
 
 	go hs.stop()
 
-	log.Println("=== Http server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
+	ilog.Info("=== Http server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
 	err := hs.ser.ListenAndServe()
 	if err != nil {
-		log.Println("=== Http server [", hs.Name, "] stop [", err, "] ===")
+		ilog.Info("=== Http server [", hs.Name, "] stop [", err, "] ===")
 	}
 }
 
@@ -134,11 +134,11 @@ func (hs *HttpServer)stop() {
 	for {
 		select {
 		case <-	hs.Ctx.Done():
-			log.Println("Http server stop ...")
-			log.Println("Wait for all http requests return ...")
+			ilog.Info("Http server stop ...")
+			ilog.Info("Wait for all http requests return ...")
 			hs.wg.Wait()
 			hs.ser.Shutdown(hs.Ctx)
-			log.Println("Http server stop success")
+			ilog.Info("Http server stop success")
 			return
 		default:
 			break
@@ -148,6 +148,7 @@ func (hs *HttpServer)stop() {
 
 //Http server output
 func (hs *HttpServer) output(w http.ResponseWriter, result *interface{}) {
+	defer hs.wg.Done()
 	var json = jsoniter.Config{
 		EscapeHTML:             false,
 		SortMapKeys:            true,
@@ -156,11 +157,10 @@ func (hs *HttpServer) output(w http.ResponseWriter, result *interface{}) {
 	if _, ok := (*result).(string); !ok {
 		r, err := json.Marshal(*result)
 		if err != nil {
-			log.Println(err)
+			ilog.Error(err)
 		}
 		io.WriteString(w, string(r))
 	} else {
 		io.WriteString(w, (*result).(string))
 	}
-	hs.wg.Done()
 }

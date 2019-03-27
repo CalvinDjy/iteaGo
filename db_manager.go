@@ -3,11 +3,10 @@ package itea
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"time"
 	"sync"
 	"fmt"
-	"context"
 	"encoding/json"
 )
 
@@ -18,23 +17,22 @@ const (
 )
 
 type DbManager struct {
-	Ctx				context.Context
 	databases 		map[string]DatabaseConf
 	connections 	map[string]*sql.DB
 	mutex 			*sync.Mutex
 }
 
 func (dm *DbManager) Construct() {
-	var conf map[string]DatabaseConf
-	if c := dm.Ctx.Value(CONNECTION_CONFIG).(*json.RawMessage); c != nil {
-		err := json.Unmarshal(*c, &conf)
+	var dbConf map[string]DatabaseConf
+	if c := conf.Config(CONNECTION_CONFIG).(*json.RawMessage); c != nil {
+		err := json.Unmarshal(*c, &dbConf)
 		if err != nil {
 			panic(err)
 		}
 	} else {
 		panic("Can not find database config of connections!")
 	}
-	dm.databases = conf
+	dm.databases = dbConf
 	dm.connections = make(map[string]*sql.DB)
 	dm.mutex = new(sync.Mutex)
 }
@@ -45,9 +43,9 @@ func (dm *DbManager) GetDbConnection(name string) (db *sql.DB) {
 	if dm.connections[name] != nil {
 		return dm.connections[name]
 	}
-	log.Println("DB connection not exist for [", name, "]")
+	ilog.Info("DB connection not exist for [", name, "]")
 	dm.connections[name] = dm.createConnection(name)
-	log.Println("DB connection create success for [", name, "]")
+	ilog.Info("DB connection create success for [", name, "]")
 	return dm.connections[name]
 }
 
@@ -55,7 +53,7 @@ func (dm *DbManager) createConnection(name string) (db *sql.DB) {
 	if dbconfig, ok := dm.databases[name]; ok {
 		db, err := sql.Open(dbconfig.Driver, dm.dataSource(dbconfig))
 		if err != nil {
-			log.Println("databse [", name, "] open fail : ", err)
+			ilog.Error("databse [", name, "] open fail : ", err)
 			return nil
 		}
 
@@ -79,7 +77,7 @@ func (dm *DbManager) createConnection(name string) (db *sql.DB) {
 
 		return db
 	} else {
-		log.Println("can not find config of databse [", name, "]")
+		ilog.Error("can not find config of databse [", name, "]")
 		return nil
 	}
 }
