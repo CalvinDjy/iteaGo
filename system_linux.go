@@ -24,12 +24,12 @@ func processSignal() {
 			break
 		case syscall.SIGUSR1:
 			//reload
-			log.Println("[linux] SIGUSR1: ", msg)
+			ilog.Info("[linux] SIGUSR1: ", msg)
 			break
 		case syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM:
 			//logger.Info("application stoping, signal[%v]", msg)
 			//b.App.Stop()
-			log.Println("[linux]", msg)
+			ilog.Info("[linux]", msg)
 			signal.Stop(sigs)
 			s <- true
 			return
