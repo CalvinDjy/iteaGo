@@ -98,18 +98,17 @@ func (p *Redis) initOpt(conf RedisConf) *redis.Options {
 	return opt
 }
 
-func (p *Redis) Setex(key string, value string, expire int) (reply interface{}, err error) {
+func (p *Redis) Setex(key string, value string, expire int) (string, error) {
 	if p.debug {
 		start := time.Now()
 		defer func() {
 			ilog.Info("【Redis Setex】耗时：", time.Since(start))
 		}()
 	}
-	p.pool.Set(key, value, time.Duration(expire) * time.Second)
-	return nil, nil
+	return p.pool.Set(key, value, time.Duration(expire) * time.Second).Result()
 }
 
-func (p *Redis) Get(key string) (value string, err error) {
+func (p *Redis) Get(key string) (string, error) {
 	if p.debug {
 		start := time.Now()
 		defer func() {
@@ -119,13 +118,22 @@ func (p *Redis) Get(key string) (value string, err error) {
 	return p.pool.Get(key).Val(), nil
 }
 
-func (p *Redis) Expire(key string, expire int) (reply interface{}, err error) {
+func (p *Redis) Expire(key string, expire int) (bool, error) {
 	if p.debug {
 		start := time.Now()
 		defer func() {
 			ilog.Info("【Redis Expire】耗时：", time.Since(start))
 		}()
 	}
-	p.pool.Expire(key, time.Duration(expire) * time.Second)
-	return nil, nil
+	return p.pool.Expire(key, time.Duration(expire) * time.Second).Result()
+}
+
+func (p *Redis) Delete(key string) (int64, error) {
+	if p.debug {
+		start := time.Now()
+		defer func() {
+			ilog.Info("【Redis Delete】耗时：", time.Since(start))
+		}()
+	}
+	return p.pool.Del(key).Result()
 }

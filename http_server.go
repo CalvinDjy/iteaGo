@@ -42,7 +42,7 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	route := hs.router.Init(hs.Route, hs.Ctx.Value(ENV).(string))
+	route := hs.router.Init(hs.Route, conf.Env)
 
 	//Get interceptor list
 	interceptor := GetInterceptor(hs.Ioc)
@@ -52,7 +52,11 @@ func (hs *HttpServer) Execute() {
 
 	for u, a := range route.Actions {
 		uri, action := u, a
-		method := reflect.ValueOf(hs.Ioc.GetInstanceByName(action.Controller)).MethodByName(action.Action)
+		controller := reflect.ValueOf(hs.Ioc.GetInstanceByName(action.Controller))
+		if !controller.IsValid() {
+			panic(fmt.Sprint("Controller [", action.Controller, "] need register"))
+		}
+		method := controller.MethodByName(action.Action)
 		
 		if !method.IsValid() {
 			ilog.Error("Can not find method [", action.Action, "] in [", action.Controller, "]")
@@ -82,19 +86,26 @@ func (hs *HttpServer) Execute() {
 			
 			if reflect.ValueOf(result).Kind() == reflect.Invalid {
 				n := method.Type().NumIn()
-				if n > 2 || n <= 0 {
-					panic("Action params must be (*http.Request) or (*http.Request, http.ResponseWriter)")
+				if n > 2 {
+					panic("Action params must be empty or (*http.Request) or (*http.Request, http.ResponseWriter)")
 				}
 
 				var p, res []reflect.Value
 				if n == 2 {
 					p = []reflect.Value{rr, rw};
-				} else {
+				} else if n == 1 {
 					p = []reflect.Value{rr};
 				}
 				res = method.Call(p);
 
-				if len(res) > 1 {
+				rl := len(res)
+
+				if rl == 0 {
+					result = nil
+					return
+				}
+
+				if rl > 1 {
 					if _, ok := res[1].Interface().(error); ok {
 						result = res[1].Interface()
 						return

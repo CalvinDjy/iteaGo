@@ -24,11 +24,10 @@ type Itea struct {
 //Create Itea
 func New(appConfig string) *Itea {
 	mutex = new(sync.Mutex)
-	ctx = context.WithValue(context.Background(), ENV, env())
 	conf = InitConf(appConfig)
+	ctx = context.WithValue(context.Background(), DEBUG, false)
 
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
-		ctx = context.WithValue(ctx, DEBUG, false)
 		return &Itea{
 			beans: process,
 			ioc: NewIoc(),
@@ -36,15 +35,6 @@ func New(appConfig string) *Itea {
 	} else {
 		panic("Can not find config of process")
 	}
-}
-
-//Env
-func env() string {
-	num := len(os.Args)
-	if num > 1 {
-		return os.Args[1]
-	}
-	return DEFAULT_ENV
 }
 
 //Debug
@@ -77,6 +67,7 @@ func (i *Itea) Start() {
 	}()
 
 	ctx, stop := context.WithCancel(ctx)
+
 	go func() {
 		if <-s {
 			ilog.Info("Itea stop ...")

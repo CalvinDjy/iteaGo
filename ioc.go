@@ -1,11 +1,11 @@
 package itea
 
 import (
+	"context"
 	"reflect"
 	"sync"
 	"strings"
 	"encoding/json"
-	"context"
 	"io/ioutil"
 )
 
@@ -27,7 +27,6 @@ const (
 )
 
 type Ioc struct {
-	ctx 				context.Context
 	register 			*Register
 	typeN 				map[string]reflect.Type
 	insN 				map[string]interface{}
@@ -43,7 +42,6 @@ type Ioc struct {
 func NewIoc() (*Ioc) {
 	register := NewRegister()
 	ioc := &Ioc{
-		ctx:ctx,
 		register:register,
 		typeN:make(map[string]reflect.Type),
 		insN:make(map[string]interface{}),
@@ -184,7 +182,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	}
 	ins := reflect.New(t)
 
-	setField(ins, CTX_KEY, ioc.ctx)
+	setField(ins, CTX_KEY, ctx)
 
 	//Execute construct method of instance
 	cm := ins.MethodByName(CONSTRUCT_FUNC)
