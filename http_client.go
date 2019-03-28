@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+const (
+	GET_REQUEST_TIMEOUT = 3
+	POST_REQUEST_TIMEOUT = 5
+)
+
 type HttpClient struct {
 	Ctx context.Context
 	debug bool
@@ -24,7 +29,7 @@ func (c *HttpClient) Construct() {
 	c.debug = c.Ctx.Value(DEBUG).(bool)
 }
 
-func (c *HttpClient) Get(u string, h map[string]string, host string) (result []byte, err error) {
+func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int) (result []byte, err error) {
 	if c.debug {
 		start := time.Now()
 		defer func() {
@@ -32,12 +37,17 @@ func (c *HttpClient) Get(u string, h map[string]string, host string) (result []b
 		}()
 	}
 
+	if timeout <= 0 {
+		timeout = GET_REQUEST_TIMEOUT
+	}
 	//tr := &http.Transport{
 	//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	//}
 
 	//client := &http.Client{Transport: tr}
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+	}
 
 	req, err := http.NewRequest("GET", u, strings.NewReader(""))
 	if err != nil {
@@ -67,7 +77,7 @@ func (c *HttpClient) Get(u string, h map[string]string, host string) (result []b
 	return body, nil
 }
 
-func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string) (result []byte, err error) {
+func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string, timeout int) (result []byte, err error) {
 	if c.debug {
 		start := time.Now()
 		defer func() {
@@ -75,12 +85,18 @@ func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, ho
 		}()
 	}
 
+	if timeout <= 0 {
+		timeout = POST_REQUEST_TIMEOUT
+	}
+
 	postParams := url.Values{}
 	for k, v := range p {
 		postParams.Set(k, v)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+	}
 
 	req, err := http.NewRequest("POST", u, strings.NewReader(postParams.Encode()))
 	if err != nil {
@@ -112,12 +128,16 @@ func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, ho
 	return body, nil
 }
 
-func (c *HttpClient) PostFile(u string, file string, filekey string, p map[string]string, h map[string]string, host string) (result []byte, err error) {
+func (c *HttpClient) PostFile(u string, file string, filekey string, p map[string]string, h map[string]string, host string, timeout int) (result []byte, err error) {
 	if c.debug {
 		start := time.Now()
 		defer func() {
 			ilog.Info("【POST FILE请求】耗时：", time.Since(start), ", 请求地址[", u, "]")
 		}()
+	}
+
+	if timeout <= 0 {
+		timeout = POST_REQUEST_TIMEOUT
 	}
 
 	//创建一个缓冲区对象,后面的要上传的body都存在这个缓冲区里
@@ -149,7 +169,9 @@ func (c *HttpClient) PostFile(u string, file string, filekey string, p map[strin
 
 	bodyWriter.Close()
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+	}
 
 	req, err := http.NewRequest("POST", u, ioutil.NopCloser(bodyBuf))
 	if err != nil {
