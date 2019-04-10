@@ -18,6 +18,15 @@ const (
 	DEFAULT_WRITE_TIMEOUT 	= 30
 )
 
+type Response struct {
+	Data interface{}
+	Header map[string]string
+}
+
+func (r *Response) SetHeader(key string, value string) {
+	r.Header[key] = value
+}
+
 type HttpServer struct {
 	Name			string
 	Ip 				string
@@ -66,25 +75,27 @@ func (hs *HttpServer) Execute() {
 
 			hs.wg.Add(1)
 
-			var result interface{}
+			response := Response{
+				Header: make(map[string]string),
+			}
 			rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
 			
-			defer hs.output(w, &result)
+			defer hs.output(w, &response)
 
 			for _, ins := range interceptor {
 				err := ins[0].Call([]reflect.Value{rr})[0].Interface()
 				if err != nil {
-					result = reflect.ValueOf(err).Interface()
+					response.Data = reflect.ValueOf(err).Interface()
 					break
 				}
-				defer ins[1].Call([]reflect.Value{rr, reflect.ValueOf(&result)})
+				defer ins[1].Call([]reflect.Value{rr, reflect.ValueOf(&response)})
 			}
 			
 			if !strings.EqualFold(r.Method, action.Method) {
-				result = NewServerError("Method not allowed")
+				response.Data = NewServerError("Method not allowed")
 			}
 			
-			if reflect.ValueOf(result).Kind() == reflect.Invalid {
+			if reflect.ValueOf(response.Data).Kind() == reflect.Invalid {
 				n := method.Type().NumIn()
 				if n > 2 {
 					panic("Action params must be empty or (*http.Request) or (*http.Request, http.ResponseWriter)")
@@ -101,17 +112,17 @@ func (hs *HttpServer) Execute() {
 				rl := len(res)
 
 				if rl == 0 {
-					result = nil
+					response.Data = nil
 					return
 				}
 
 				if rl > 1 {
 					if _, ok := res[1].Interface().(error); ok {
-						result = res[1].Interface()
+						response.Data = res[1].Interface()
 						return
 					}
 				}
-				result = res[0].Interface()
+				response.Data = res[0].Interface()
 			}
 		})
 	}
@@ -158,20 +169,25 @@ func (hs *HttpServer)stop() {
 }
 
 //Http server output
-func (hs *HttpServer) output(w http.ResponseWriter, result *interface{}) {
+func (hs *HttpServer) output(w http.ResponseWriter, response *Response) {
 	defer hs.wg.Done()
 	var json = jsoniter.Config{
 		EscapeHTML:             false,
 		SortMapKeys:            true,
 		ValidateJsonRawMessage: true,
 	}.Froze()
-	if _, ok := (*result).(string); !ok {
-		r, err := json.Marshal(*result)
+	if response.Header != nil {
+		for k, v := range response.Header {
+			w.Header().Set(k, v)
+		}
+	}
+	if _, ok := (*response).Data.(string); !ok {
+		r, err := json.Marshal((*response).Data)
 		if err != nil {
 			ilog.Error(err)
 		}
 		io.WriteString(w, string(r))
 	} else {
-		io.WriteString(w, (*result).(string))
+		io.WriteString(w, (*response).Data.(string))
 	}
 }
