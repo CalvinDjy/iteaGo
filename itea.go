@@ -91,3 +91,18 @@ func (i *Itea) Start() {
 	}
 
 }
+
+type IteaTest struct {
+	Ioc 	*Ioc
+}
+
+//Create IteaTest
+func NewIteaTest(appConfig string) *IteaTest {
+	mutex = new(sync.Mutex)
+	conf = InitConf(appConfig)
+	ctx = context.WithValue(context.Background(), DEBUG, true)
+	InitLog()
+	return &IteaTest{
+		Ioc: NewIoc(),
+	}
+}
