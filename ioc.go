@@ -56,7 +56,8 @@ func NewIoc() (*Ioc) {
 	
 	go func() {
 		defer ioc.wg.Done()
-		if len(conf.Config(IMPORT_CONFIG).([]string)) != 0 {
+		imp := conf.Config(IMPORT_CONFIG)
+		if imp != nil && len(imp.([]string)) != 0 {
 			ioc.importConfig(conf.Config(IMPORT_CONFIG).([]string))
 		}
 	}()
@@ -140,20 +141,20 @@ func (ioc *Ioc) InitProcess(ctx context.Context, bean Bean) {
 }
 
 //Get instance by name
-func (ioc *Ioc) GetInstanceByName(name string) (interface{}) {
+func (ioc *Ioc) InsByName(name string) (interface{}) {
 	defer ioc.mutex.Unlock()
 	ioc.mutex.Lock()
-	return ioc.getInstanceByName(name)
+	return ioc.instanceByName(name)
 }
 
 //Get instance by Type
-func (ioc *Ioc) GetInstanceByType(t reflect.Type) (interface{}) {
+func (ioc *Ioc) InsByType(t reflect.Type) (interface{}) {
 	defer ioc.mutex.Unlock()
 	ioc.mutex.Lock()
-	return ioc.getInstanceByType(t)
+	return ioc.instanceByType(t)
 }
 
-func (ioc *Ioc)getInstanceByName(name string) (interface{}) {
+func (ioc *Ioc) instanceByName(name string) (interface{}) {
 	var(
 		instance interface{}
 		exist bool
@@ -164,7 +165,7 @@ func (ioc *Ioc)getInstanceByName(name string) (interface{}) {
 	return instance
 }
 
-func (ioc *Ioc)getInstanceByType(t reflect.Type) (interface{}) {
+func (ioc *Ioc) instanceByType(t reflect.Type) (interface{}) {
 	var(
 		instance interface{}
 		exist bool
@@ -198,12 +199,12 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 		}
 		switch f.Kind() {
 		case reflect.Struct:
-			if i := ioc.getInstanceByType(f.Type()); i != nil {
+			if i := ioc.instanceByType(f.Type()); i != nil {
 				f.Set(reflect.ValueOf(i).Elem())
 			}
 			break
 		case reflect.Ptr:
-			if i := ioc.getInstanceByType(f.Type().Elem()); i != nil {
+			if i := ioc.instanceByType(f.Type().Elem()); i != nil {
 				f.Set(reflect.ValueOf(i))
 			}
 			break

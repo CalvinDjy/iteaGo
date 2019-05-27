@@ -12,6 +12,7 @@ func process() []interface{} {
 	return [] interface{}{
 		HttpServer{},
 		ThriftServer{},
+		Scheduler{},
 	}
 }
 
@@ -27,12 +28,12 @@ func NewRegister() (c *Register) {
 }
 
 //Init system beans
-func (r *Register)Init() []reflect.Type {
+func (r *Register) Init() []reflect.Type {
 	return r.Register(append(process(), module()...))
 }
 
 //Register beans
-func (r *Register)Register(beans [] interface{}) [] reflect.Type {
+func (r *Register) Register(beans [] interface{}) [] reflect.Type {
 	var l []reflect.Type
 	for _, v := range beans {
 		l = append(l, reflect.TypeOf(v))

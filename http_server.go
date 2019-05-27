@@ -61,7 +61,7 @@ func (hs *HttpServer) Execute() {
 
 	for u, a := range route.Actions {
 		uri, action := u, a
-		controller := reflect.ValueOf(hs.Ioc.GetInstanceByName(action.Controller))
+		controller := reflect.ValueOf(hs.Ioc.InsByName(action.Controller))
 		if !controller.IsValid() {
 			panic(fmt.Sprint("Controller [", action.Controller, "] need register"))
 		}
@@ -85,7 +85,7 @@ func (hs *HttpServer) Execute() {
 			for _, ins := range interceptor {
 				err := ins[0].Call([]reflect.Value{rr})[0].Interface()
 				if err != nil {
-					response.Data = reflect.ValueOf(err).Interface()
+					response.Data = err
 					break
 				}
 				defer ins[1].Call([]reflect.Value{rr, reflect.ValueOf(&response)})
@@ -133,7 +133,7 @@ func (hs *HttpServer) Execute() {
 }
 
 //Http server start
-func (hs *HttpServer)start() {
+func (hs *HttpServer) start() {
 	hs.ser.Addr = fmt.Sprintf("%s:%s", hs.Ip, hs.Port)
 	if hs.ReadTimeout != 0 {
 		hs.ser.ReadTimeout = time.Duration(hs.ReadTimeout) * time.Second
@@ -152,7 +152,7 @@ func (hs *HttpServer)start() {
 }
 
 //Http server stop
-func (hs *HttpServer)stop() {
+func (hs *HttpServer) stop() {
 	for {
 		select {
 		case <-	hs.Ctx.Done():

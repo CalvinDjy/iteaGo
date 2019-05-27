@@ -17,7 +17,7 @@ type action struct {
 	Action 		string
 }
 
-func (r *Route)Init(routeConfig string, env string) (route *Route){
+func (r *Route) Init(routeConfig string, env string) (route *Route){
 	projectPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -36,7 +36,7 @@ func (r *Route)Init(routeConfig string, env string) (route *Route){
 	return r
 }
 
-func (r *Route)extract(mapping map[string][]string) {
+func (r *Route) extract(mapping map[string][]string) {
 	for uri, path := range mapping {
 		pathArray := strings.Split(path[1], "/")
 		r.Actions[uri] = &action{

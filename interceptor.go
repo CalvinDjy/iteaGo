@@ -16,7 +16,7 @@ func GetInterceptor(ioc *Ioc) [][]reflect.Value {
 	var key []int
 	for _, t := range ioc.typeN {
 		if t.Implements(reflect.TypeOf(new(IInterceptor)).Elem()) {
-			v := reflect.ValueOf(ioc.GetInstanceByType(t))
+			v := reflect.ValueOf(ioc.InsByType(t))
 			list[ioc.idT[t]] = []reflect.Value{
 				v.MethodByName("Enter"),
 				v.MethodByName("Exit"),

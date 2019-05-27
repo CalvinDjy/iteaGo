@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"fmt"
 )
 
 var (
@@ -28,12 +29,15 @@ type ILog interface {
 	Fatal(v ...interface{})
 }
 
+/*****************************************************  日志文件  ****************************************************/
+
 type Log struct {
 	log *log.Logger
 	wg sync.WaitGroup
+	logfile *os.File
 }
 
-func(l *Log) Init() {
+func (l *Log) Init() {
 	if strings.EqualFold(logfile, "") {
 		logfile = DEFAULT_LOG_FILE
 	}
@@ -41,14 +45,15 @@ func(l *Log) Init() {
 		go l.rotateFile(logfile)
 		logfile = l.rotateName(logfile)
 	}
-	File, err := os.OpenFile(logfile, os.O_CREATE|os.O_WRONLY|os.O_APPEND,0)
+	file, err := os.OpenFile(logfile, os.O_CREATE|os.O_WRONLY|os.O_APPEND,0)
 	if err != nil {
-		panic("open file error !")
+		panic("open log file error !")
 	}
-	l.log = log.New(File, "", log.LstdFlags)
+	l.logfile = file
+	l.log = log.New(file, "", log.LstdFlags)
 }
 
-func(l *Log) rotateName(logfile string) string {
+func (l *Log) rotateName(logfile string) string {
 	f := strings.Split(logfile, ".")
 	var s bytes.Buffer
 	s.WriteString(strings.Join(f[0:len(f) - 1], "."))
@@ -59,7 +64,7 @@ func(l *Log) rotateName(logfile string) string {
 	return s.String()
 }
 
-func(l *Log) rotateFile(logfile string) {
+func (l *Log) rotateFile(logfile string) {
 	filename := logfile
 	for {
 		now := time.Now()
@@ -72,6 +77,8 @@ func(l *Log) rotateFile(logfile string) {
 		for {
 			file, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND,0)
 			if err == nil {
+				l.logfile.Close()
+				l.logfile = file
 				l.log = log.New(file, "", log.LstdFlags)
 				break
 			}
@@ -79,12 +86,12 @@ func(l *Log) rotateFile(logfile string) {
 	}
 }
 
-func(l *Log) Done() bool {
+func (l *Log) Done() bool {
 	l.wg.Wait()
 	return true
 }
 
-func(l *Log) Debug(v ...interface{}) {
+func (l *Log) Debug(v ...interface{}) {
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
@@ -93,7 +100,7 @@ func(l *Log) Debug(v ...interface{}) {
 	}()
 }
 
-func(l *Log) Info(v ...interface{}) {
+func (l *Log) Info(v ...interface{}) {
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
@@ -102,7 +109,7 @@ func(l *Log) Info(v ...interface{}) {
 	}()
 }
 
-func(l *Log) Error(v ...interface{}) {
+func (l *Log) Error(v ...interface{}) {
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
@@ -111,7 +118,7 @@ func(l *Log) Error(v ...interface{}) {
 	}()
 }
 
-func(l *Log) Fatal(v ...interface{}) {
+func (l *Log) Fatal(v ...interface{}) {
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
@@ -119,11 +126,49 @@ func(l *Log) Fatal(v ...interface{}) {
 		l.log.Println(v)
 	}()
 }
+/*****************************************************  日志文件  ****************************************************/
 
-func Init(file string, ro bool) {
+/******************************************************  控制台  *****************************************************/
+
+type Console struct {
+
+}
+
+func (c *Console) Init() {
+
+}
+
+func (c *Console) Done() bool{
+	return true
+}
+
+func (c *Console) Debug(v ...interface{}){
+	fmt.Println("[DEBUG]", time.Now().Format("2006/01/02 15:04:05"),  v)
+}
+
+func (c *Console) Info(v ...interface{}){
+	fmt.Println("[INFO]", time.Now().Format("2006/01/02 15:04:05"), v)
+}
+
+func (c *Console) Error(v ...interface{}){
+	fmt.Println("[ERROR]", time.Now().Format("2006/01/02 15:04:05"), v)
+}
+
+func (c *Console) Fatal(v ...interface{}){
+	fmt.Println("[FATAL]", time.Now().Format("2006/01/02 15:04:05"), v)
+}
+
+/******************************************************  控制台  *****************************************************/
+
+
+func Init(logtype string, file string, ro bool) {
 	logfile = file
 	rotate = ro
-	loggor = new(Log)
+	if strings.EqualFold(logtype, "file") {
+		loggor = new(Log)
+	}else {
+		loggor = new(Console)
+	}
 	loggor.Init()
 }
 

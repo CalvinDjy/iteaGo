@@ -11,6 +11,7 @@ type ThriftServer struct {
 	Name   			string
 	Ip				string
 	Port 			string
+	Multiplexed		bool
 	Processor 		[]interface{}
 	Ctx             context.Context
 	Ioc 			*Ioc
@@ -30,19 +31,8 @@ func (ts *ThriftServer) Execute() {
 	
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	
-	multiProcess := thrift.NewTMultiplexedProcessor()
 
-	for _, v := range ts.Processor {
-		processor := ts.Ioc.GetInstanceByName(v.(string))
-		if _, ok := processor.(IProcessor); ok {
-			p := processor.(IProcessor)
-			multiProcess.RegisterProcessor(p.Name(), p.Processor())
-			ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
-		}
-	}
-
-	ts.ser = thrift.NewTSimpleServer4(multiProcess, serverTransport, transportFactory, protocolFactory)
+	ts.ser = thrift.NewTSimpleServer4(ts.processor(), serverTransport, transportFactory, protocolFactory)
 	
 	go ts.stop()
 
@@ -55,8 +45,30 @@ func (ts *ThriftServer) Execute() {
 	
 }
 
+//Thrift processor
+func (ts *ThriftServer) processor() thrift.TProcessor {
+	if ts.Multiplexed {
+		processor := thrift.NewTMultiplexedProcessor()
+		for _, v := range ts.Processor {
+			if p, ok := ts.Ioc.InsByName(v.(string)).(IProcessor); ok {
+				processor.RegisterProcessor(p.Name(), p.Processor())
+				ilog.Info("--- Register multiplexed thrift processor [", p.Name(), "] ---")
+			}
+		}
+		return processor
+	} else {
+		if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
+			processor := p.Processor()
+			ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
+			return processor
+		} 
+		ilog.Info("Thrift processor config error")
+		panic("Thrift processor config error")
+	}
+}
+
 //Thrift server stop
-func (ts *ThriftServer)stop() {
+func (ts *ThriftServer) stop() {
 	for {
 		select {
 		case <-	ts.Ctx.Done():
