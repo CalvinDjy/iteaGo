@@ -37,6 +37,14 @@ func New(appConfig string) *Itea {
 	}
 }
 
+//Get environment
+func Env() string {
+	if conf == nil {
+		panic("Please init itea")
+	}
+	return conf.Env
+}
+
 //Debug
 func (i *Itea) Debug() *Itea {
 	ctx = context.WithValue(ctx, DEBUG, true)
