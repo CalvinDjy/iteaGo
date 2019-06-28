@@ -57,11 +57,13 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		}
 		return processor
 	} else {
-		if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
-			processor := p.Processor()
-			ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
-			return processor
-		} 
+		if ts.Processor != nil && len(ts.Processor) > 0 {
+			if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
+				processor := p.Processor()
+				ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
+				return processor
+			} 
+		}
 		ilog.Info("Thrift processor config error")
 		panic("Thrift processor config error")
 	}

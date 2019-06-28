@@ -5,6 +5,7 @@ import (
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"os"
 	"sync"
+	"fmt"
 )
 
 var (
@@ -26,7 +27,7 @@ func New(appConfig string) *Itea {
 	mutex = new(sync.Mutex)
 	conf = InitConf(appConfig)
 	ctx = context.WithValue(context.Background(), DEBUG, false)
-
+	InitLog()
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
 		return &Itea{
 			beans: process,
@@ -53,6 +54,9 @@ func (i *Itea) Debug() *Itea {
 
 //Register beans
 func (i *Itea) Register(beans ...[] interface{}) *Itea {
+	if i == nil {
+		return nil
+	}
 	var beanList [] interface{}
 	for _, bean := range beans{
 		beanList = append(beanList, bean...)
@@ -61,18 +65,28 @@ func (i *Itea) Register(beans ...[] interface{}) *Itea {
 	return i
 }
 
+//Run Itea
+func (i *Itea) Run() {
+	num := len(os.Args)
+	if num <= 1 {
+		i.start()
+	}
+	switch os.Args[1] {
+	case "start":
+		i.start()
+	case "stop":
+		i.stop()
+	default:
+		fmt.Println("error cmd")
+	}
+}
+
 //Start Itea
-func (i *Itea) Start() {
-	InitLog()
+func (i *Itea) start() {
 	go logProcessInfo()
 
 	s = make(chan bool)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		processSignal()
-	}()
+	go processSignal()
 
 	ctx, stop := context.WithCancel(ctx)
 
@@ -93,11 +107,16 @@ func (i *Itea) Start() {
 	wg.Wait()
 
 	ilog.Info("Itea stop success. Good bye ")
-
+	
 	if ilog.Done() {
+		removePid()
 		os.Exit(0)
 	}
 
+}
+
+func (i *Itea) stop() {
+	stopProcess()
 }
 
 type IteaTest struct {

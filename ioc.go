@@ -1,18 +1,18 @@
 package itea
 
 import (
+	"gopkg.in/yaml.v2"
 	"context"
 	"reflect"
 	"sync"
 	"strings"
-	"encoding/json"
 	"io/ioutil"
 )
 
 const (
 	PROCESS_CONFIG 	= "process"
 	DB_CONFIG 		= "database"
-	IMPORT_CONFIG 	= "@import"
+	IMPORT_CONFIG 	= "import"
 	LOG_CONFIG 		= "log"
 	DEBUG			= "debug"
 	CONNECTION_CONFIG		= "connections"
@@ -31,11 +31,9 @@ type Ioc struct {
 	typeN 				map[string]reflect.Type
 	insN 				map[string]interface{}
 	insT 				map[reflect.Type]interface{}
-	idT					map[reflect.Type]int
 	imports				map[string]map[string]string
 	mutex 				*sync.Mutex
 	wg 					sync.WaitGroup
-	tid					int
 }
 
 //Create ioc
@@ -46,10 +44,8 @@ func NewIoc() (*Ioc) {
 		typeN:make(map[string]reflect.Type),
 		insN:make(map[string]interface{}),
 		insT:make(map[reflect.Type]interface{}),
-		idT:make(map[reflect.Type]int),
 		mutex:new(sync.Mutex),
 		imports:make(map[string]map[string]string),
-		tid:0,
 	}
 	
 	ioc.wg.Add(2)
@@ -58,7 +54,7 @@ func NewIoc() (*Ioc) {
 		defer ioc.wg.Done()
 		imp := conf.Config(IMPORT_CONFIG)
 		if imp != nil && len(imp.([]string)) != 0 {
-			ioc.importConfig(conf.Config(IMPORT_CONFIG).([]string))
+			ioc.importConfig(imp.([]string))
 		}
 	}()
 
@@ -68,8 +64,6 @@ func NewIoc() (*Ioc) {
 		if len(tl) > 0 {
 			for _, t := range tl {
 				ioc.typeN[t.Name()] = t
-				ioc.tid++
-				ioc.idT[t] = ioc.tid
 			}
 		}
 	}()
@@ -87,7 +81,7 @@ func (ioc *Ioc) importConfig(imports []string) {
 			panic("Import [" + filePath + "] config not find")
 		}
 		var imconfig map[string]map[string]string
-		err = json.Unmarshal(dat, &imconfig)
+		err = yaml.Unmarshal(dat, &imconfig)
 		if err != nil {
 			panic("Import [" + filePath + "] config extract error")
 		}
@@ -103,15 +97,22 @@ func (ioc *Ioc) RegisterBeans(beans [] interface{}) {
 	if len(tl) > 0 {
 		for _, t := range tl {
 			ioc.typeN[t.Name()] = t
-			ioc.tid++
-			ioc.idT[t] = ioc.tid
 		}
 	}
 }
 
 //Init process of application
 func (ioc *Ioc) InitProcess(ctx context.Context, bean Bean) {
-	p := reflect.New(ioc.getType(bean.Class))
+	if strings.EqualFold(bean.Class, "") {
+		return
+	}
+
+	t := ioc.getType(bean.Class)
+	if t == nil {
+		return
+	}
+
+	p := reflect.New(t)
 
 	ioc.wg.Add(1)
 	go func() {

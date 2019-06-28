@@ -1,7 +1,7 @@
 package itea
 
 import (
-	"encoding/json"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -16,8 +16,8 @@ const (
 type Config struct {
 	Env 			string
 	projectPath 	string
-	conf 			map[string]*json.RawMessage
-	confMap			map[string]interface{}
+	appConf 		Application
+	config			map[string]interface{}
 	wg				sync.WaitGroup
 }
 
@@ -31,16 +31,16 @@ func InitConf(appConfig string) *Config {
 	if err != nil {
 		panic("Application config not find")
 	}
-	var conf map[string]*json.RawMessage
-	err = json.Unmarshal(dat, &conf)
+	var appConf Application
+	err = yaml.Unmarshal(dat, &appConf)
 	if err != nil {
 		panic("Application config extract error")
 	}
 	config := &Config{
 		projectPath: projectPath,
 		Env: env,
-		conf: conf,
-		confMap: make(map[string]interface{}),
+		appConf: appConf,
+		config: make(map[string]interface{}),
 	}
 	config.wg.Add(3)
 	go config.dbConfig()
@@ -53,8 +53,16 @@ func InitConf(appConfig string) *Config {
 //Env
 func env() string {
 	num := len(os.Args)
-	if num > 1 {
-		return os.Args[1]
+	if num <= 1 {
+		return DEFAULT_ENV
+	}
+	for i, arg := range os.Args {
+		if !strings.EqualFold(arg, "-e") {
+			continue
+		}
+		if i + 1 <= num - 1 {
+			return os.Args[i + 1]
+		}
 	}
 	return DEFAULT_ENV
 }
@@ -62,39 +70,34 @@ func env() string {
 //Extract database config
 func (c *Config) dbConfig() {
 	defer c.wg.Done()
-	if v, ok := c.conf[DB_CONFIG]; ok {
-		var s string
-		json.Unmarshal(*v, &s)
+	if !strings.EqualFold(c.appConf.Database, "") {
+		s := c.appConf.Database
 		path := c.projectPath + strings.Replace(s, SEARCH_ENV, c.Env, -1)
 		dat, err := ioutil.ReadFile(path)
 		if err != nil {
 			panic("[" + path + "] config not find")
 		}
-		var databases map[string]*json.RawMessage
-		err = json.Unmarshal(dat, &databases)
+		var databases StorageConf
+		err = yaml.Unmarshal(dat, &databases)
 		if err != nil {
 			panic(err)
 		}
-		for k, v := range databases {
-			mutex.Lock()
-			c.confMap[k] = v
-			mutex.Unlock()
-		}
+		c.config[CONNECTION_CONFIG] = databases.Connections
+		c.config[REDIS_CONFIG] = databases.Redis
 	}
 }
 
 //Extract import config
 func (c *Config) importConfig() {
 	defer c.wg.Done()
-	if v, ok := c.conf[IMPORT_CONFIG]; ok {
-		var pathList []string
-		json.Unmarshal(*v, &pathList)
+	if len(c.appConf.Import) > 0 {
+		pathList := c.appConf.Import
 		if pathList != nil {
 			for i, _ := range pathList {
 				pathList[i] = c.projectPath + strings.Replace(pathList[i], SEARCH_ENV, c.Env, -1)
 			}
 			mutex.Lock()
-			c.confMap[IMPORT_CONFIG] = pathList
+			c.config[IMPORT_CONFIG] = pathList
 			mutex.Unlock()
 		}
 	}
@@ -103,27 +106,20 @@ func (c *Config) importConfig() {
 //Extract log config
 func (c *Config) logConfig() {
 	defer c.wg.Done()
-	if v, ok := c.conf[LOG_CONFIG]; ok {
-		var log map[string]interface{}
-		json.Unmarshal(*v, &log)
+	if !strings.EqualFold(c.appConf.Log.Type, "") {
 		mutex.Lock()
-		c.confMap[LOG_CONFIG] = log
+		c.config[LOG_CONFIG] = c.appConf.Log
 		mutex.Unlock()
 	}
 }
 
 func (c *Config) Config(name string) interface{} {
-	if v, ok := c.confMap[name]; ok {
+	if v, ok := c.config[name]; ok {
 		return v
 	}
 	return nil
 }
 
 func (c *Config) Beans(name string) []Bean{
-	if v, ok := c.conf[name]; ok {
-		var beans []Bean
-		json.Unmarshal(*v, &beans)
-		return beans
-	}
-	return nil
+	return c.appConf.Process
 }

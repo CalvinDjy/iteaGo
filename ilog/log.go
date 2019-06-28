@@ -88,6 +88,7 @@ func (l *Log) rotateFile(logfile string) {
 
 func (l *Log) Done() bool {
 	l.wg.Wait()
+	l.logfile.Close()
 	return true
 }
 

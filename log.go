@@ -2,20 +2,20 @@ package itea
 
 import (
 	"github.com/CalvinDjy/iteaGo/ilog"
+	"strings"
 )
 
 func InitLog() {
 	logtype, logfile, rotate := "", "", false
-	if logConf, ok := conf.Config(LOG_CONFIG).(map[string]interface{}); ok {
-		if v, ok := logConf["type"]; ok {
-			logtype = v.(string)
+	if conf.Config(LOG_CONFIG) != nil {
+		logConf := conf.Config(LOG_CONFIG).(Log)
+		if !strings.EqualFold(logConf.Type, "") {
+			logtype = logConf.Type
 		}
-		if v, ok := logConf["logfile"]; ok {
-			logfile = v.(string)
+		if !strings.EqualFold(logConf.Logfile, "") {
+			logfile = logConf.Logfile
 		}
-		if v, ok := logConf["rotate"]; ok {
-			rotate = v.(bool)
-		}
+		rotate = logConf.Rotate
 	}
 	ilog.Init(logtype, logfile, rotate)
 }

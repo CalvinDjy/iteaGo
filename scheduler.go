@@ -29,11 +29,11 @@ func (s *Scheduler) Execute() {
 	s.cron = cron.New()
 	
 	for _, process := range s.Processor {
-		if _, ok := process.(map[string]interface{}); !ok {
+		if _, ok := process.(map[interface{}]interface{}); !ok {
 			continue
 		}
 
-		p := process.(map[string]interface{})
+		p := process.(map[interface{}]interface{})
 
 		if _, ok := p[TASK_KEY]; !ok {
 			continue

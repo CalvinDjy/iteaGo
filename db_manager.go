@@ -7,7 +7,6 @@ import (
 	"time"
 	"sync"
 	"fmt"
-	"encoding/json"
 )
 
 const (
@@ -23,16 +22,11 @@ type DbManager struct {
 }
 
 func (dm *DbManager) Construct() {
-	var dbConf map[string]DatabaseConf
-	if c := conf.Config(CONNECTION_CONFIG).(*json.RawMessage); c != nil {
-		err := json.Unmarshal(*c, &dbConf)
-		if err != nil {
-			panic(err)
-		}
+	if c := conf.Config(CONNECTION_CONFIG); c != nil {
+		dm.databases = c.(map[string]DatabaseConf)
 	} else {
 		panic("Can not find database config of connections!")
 	}
-	dm.databases = dbConf
 	dm.connections = make(map[string]*sql.DB)
 	dm.mutex = new(sync.Mutex)
 }

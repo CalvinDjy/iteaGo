@@ -31,8 +31,8 @@ type HttpServer struct {
 	Name			string
 	Ip 				string
 	Port 			string
-	ReadTimeout 	float64
-	WriteTimeout 	float64
+	ReadTimeout 	int
+	WriteTimeout 	int
 	Route			string
 	Ctx             context.Context
 	Ioc 			*Ioc
@@ -53,9 +53,6 @@ func (hs *HttpServer) Execute() {
 	//Init route
 	route := hs.router.Init(hs.Route, conf.Env)
 
-	//Get interceptor list
-	interceptor := GetInterceptor(hs.Ioc)
-
 	//Create route manager
 	mux := http.NewServeMux()
 
@@ -70,7 +67,10 @@ func (hs *HttpServer) Execute() {
 		if !method.IsValid() {
 			ilog.Error("Can not find method [", action.Action, "] in [", action.Controller, "]")
 		}
-
+		
+		//Get action interceptor list
+		interceptor := ActionInterceptor(a.Middleware, hs.Ioc)
+		
 		mux.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request){
 
 			hs.wg.Add(1)

@@ -1,33 +1,51 @@
 package itea
 
+type Application struct {
+	Process []Bean					`yaml:"process"`
+	Database string					`yaml:"database"`
+	Import []string					`yaml:"import"`
+	Log Log							`yaml:"log,omitempty"`
+}
+
 type Bean struct {
-	Name string 					`json:"name"`
-	Class string 					`json:"class"`
-	ExecuteMethod string			`json:"execute"`
-	Params map[string]interface{}	`json:"construct-params"`
+	Name string 					`yaml:"name"`
+	Class string 					`yaml:"class"`
+	ExecuteMethod string			`yaml:"execute"`
+	Params map[string]interface{}	`yaml:"construct-params"`
+}
+
+type Log struct {
+	Type string						`yaml:"type"`
+	Logfile string					`yaml:"logfile"`
+	Rotate bool						`yaml:"rotate"`
+}
+
+type StorageConf struct {
+	Connections map[string]DatabaseConf	`yaml:"connections"`
+	Redis RedisConf						`yaml:"redis"`
 }
 
 type DatabaseConf struct {
-	Driver string					`json:"driver"`
-	Ip string						`json:"ip"`
-	Port string						`json:"port"`
-	Database string					`json:"database"`
-	Username string					`json:"username"`
-	Password string					`json:"password"`
-	Charset string					`json:"charset"`
-	MaxConn int						`json:"maxConn"`
-	MaxIdle int						`json:"maxIdle"`
-	ConnMaxLift int					`json:"connMaxLift"`
+	Driver string					`yaml:"driver"`
+	Ip string						`yaml:"ip"`
+	Port string						`yaml:"port"`
+	Database string					`yaml:"database"`
+	Username string					`yaml:"username"`
+	Password string					`yaml:"password"`
+	Charset string					`yaml:"charset"`
+	MaxConn int						`yaml:"maxConn"`
+	MaxIdle int						`yaml:"maxIdle"`
+	ConnMaxLift int					`yaml:"connMaxLift"`
 }
 
 type RedisConf struct {
-	Host string						`json:"host"`
-	Port string 					`json:"port"`
-	Database int					`json:"database"`
-	Password string 				`json:"password"`
-	MaxIdle int 					`json:"max_idle"`
-	MaxActive int					`json:"max_active"`
-	IdleTimeout int 				`json:"idle_timeout"`
-	MaxConnLifetime int 			`json:"max_conn_lifetime"`
-	IdleCheck int					`json:"idle_check"`
+	Host string						`yaml:"host"`
+	Port string 					`yaml:"port"`
+	Database int					`yaml:"database"`
+	Password string 				`yaml:"password"`
+	MaxIdle int 					`yaml:"max_idle"`
+	MaxActive int					`yaml:"max_active"`
+	IdleTimeout int 				`yaml:"idle_timeout"`
+	MaxConnLifetime int 			`yaml:"max_conn_lifetime"`
+	IdleCheck int					`yaml:"idle_check"`
 }
