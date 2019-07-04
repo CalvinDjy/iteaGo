@@ -1,13 +1,13 @@
 package itea
 
 type Application struct {
-	Process []Bean					`yaml:"process"`
+	Process []Process				`yaml:"process"`
 	Database string					`yaml:"database"`
 	Import []string					`yaml:"import"`
 	Log Log							`yaml:"log,omitempty"`
 }
 
-type Bean struct {
+type Process struct {
 	Name string 					`yaml:"name"`
 	Class string 					`yaml:"class"`
 	ExecuteMethod string			`yaml:"execute"`

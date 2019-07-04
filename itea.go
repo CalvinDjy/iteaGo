@@ -18,7 +18,7 @@ var (
 )
 
 type Itea struct {
-	beans 	[]Bean
+	process	[]Process
 	ioc 	*Ioc
 }
 
@@ -30,7 +30,7 @@ func New(appConfig string) *Itea {
 	InitLog()
 	if process := conf.Beans(PROCESS_CONFIG); process != nil {
 		return &Itea{
-			beans: process,
+			process: process,
 			ioc: NewIoc(),
 		}
 	} else {
@@ -52,12 +52,25 @@ func (i *Itea) Debug() *Itea {
 	return i
 }
 
-//Register beans
-func (i *Itea) Register(beans ...[] interface{}) *Itea {
+//Register simple beans
+func (i *Itea) Register(beans ...[]interface{}) *Itea {
 	if i == nil {
 		return nil
 	}
 	var beanList [] interface{}
+	for _, bean := range beans{
+		beanList = append(beanList, bean...)
+	}
+	i.ioc.Register(beanList)
+	return i
+}
+
+//Register beans
+func (i *Itea) RegisterBean(beans ...[]*Bean) *Itea {
+	if i == nil {
+		return nil
+	}
+	var beanList []*Bean
 	for _, bean := range beans{
 		beanList = append(beanList, bean...)
 	}
@@ -96,12 +109,12 @@ func (i *Itea) start() {
 			stop()
 		}
 	}()
-	for _, p := range i.beans {
+	for _, p := range i.process {
 		var process = p
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			i.ioc.InitProcess(ctx, process)
+			i.ioc.ExecProcess(ctx, process)
 		}()
 	}
 	wg.Wait()
@@ -115,6 +128,7 @@ func (i *Itea) start() {
 
 }
 
+//Stop itea
 func (i *Itea) stop() {
 	stopProcess()
 }

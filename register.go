@@ -2,7 +2,10 @@ package itea
 
 import (
 	"reflect"
+	"strings"
 )
+
+const SINGLETON = "singleton"
 
 type Register struct {
 
@@ -28,15 +31,50 @@ func NewRegister() (c *Register) {
 }
 
 //Init system beans
-func (r *Register) Init() []reflect.Type {
+func (r *Register) Init() []*Bean {
 	return r.Register(append(process(), module()...))
 }
 
 //Register beans
-func (r *Register) Register(beans [] interface{}) [] reflect.Type {
-	var l []reflect.Type
-	for _, v := range beans {
-		l = append(l, reflect.TypeOf(v))
+func (r *Register) Register(class []interface{}) []*Bean {
+	var beans []*Bean
+	for _, b := range class {
+		t := reflect.TypeOf(b)
+		bean := &Bean{
+			Name: t.Name(),
+			Scope: SINGLETON,
+			Abstract: b,
+			Concrete: b,
+		}
+		bean.setAbstractType(t)
+		bean.setConcreteType(t)
+		beans = append(beans, bean)
 	}
-	return l
+	return beans
+}
+
+//Register beans
+func (r *Register) RegisterBeans(beans []*Bean) []*Bean {
+	for _, bean := range beans {
+		if bean.Concrete == nil {
+			panic("concrete of bean should not be nil")
+		}
+
+		tc := reflect.TypeOf(bean.Concrete)
+		bean.setConcreteType(tc)
+		if bean.Abstract == nil {
+			bean.Abstract = bean.Concrete
+		}
+		ta := reflect.TypeOf(bean.Abstract)
+		bean.setAbstractType(ta)
+
+		if strings.EqualFold(bean.Name, "") {
+			bean.Name = ta.Name()
+		}
+
+		if strings.EqualFold(bean.Scope, "") {
+			bean.Scope = "singleton"
+		}
+	}
+	return beans
 }

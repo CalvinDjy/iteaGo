@@ -28,12 +28,12 @@ const (
 
 type Ioc struct {
 	register 			*Register
-	typeN 				map[string]reflect.Type
+	beansN				map[string]*Bean
+	beansT				map[reflect.Type]*Bean
 	insN 				map[string]interface{}
 	insT 				map[reflect.Type]interface{}
 	imports				map[string]map[string]string
 	mutex 				*sync.Mutex
-	wg 					sync.WaitGroup
 }
 
 //Create ioc
@@ -41,17 +41,20 @@ func NewIoc() (*Ioc) {
 	register := NewRegister()
 	ioc := &Ioc{
 		register:register,
-		typeN:make(map[string]reflect.Type),
+		beansN:make(map[string]*Bean),
+		beansT:make(map[reflect.Type]*Bean),
 		insN:make(map[string]interface{}),
 		insT:make(map[reflect.Type]interface{}),
 		mutex:new(sync.Mutex),
 		imports:make(map[string]map[string]string),
 	}
 	
-	ioc.wg.Add(2)
+	var wg sync.WaitGroup
+	
+	wg.Add(2)
 	
 	go func() {
-		defer ioc.wg.Done()
+		defer wg.Done()
 		imp := conf.Config(IMPORT_CONFIG)
 		if imp != nil && len(imp.([]string)) != 0 {
 			ioc.importConfig(imp.([]string))
@@ -59,16 +62,11 @@ func NewIoc() (*Ioc) {
 	}()
 
 	go func() {
-		defer ioc.wg.Done()
-		tl := register.Init()
-		if len(tl) > 0 {
-			for _, t := range tl {
-				ioc.typeN[t.Name()] = t
-			}
-		}
+		defer wg.Done()
+		ioc.appendBeans(register.Init())
 	}()
 
-	ioc.wg.Wait()
+	wg.Wait()
 
 	return ioc
 }
@@ -92,46 +90,57 @@ func (ioc *Ioc) importConfig(imports []string) {
 }
 
 //Register beans
-func (ioc *Ioc) RegisterBeans(beans [] interface{}) {
-	tl := ioc.register.Register(beans)
-	if len(tl) > 0 {
-		for _, t := range tl {
-			ioc.typeN[t.Name()] = t
+func (ioc *Ioc) Register(beans [] interface{}) {
+	ioc.appendBeans(ioc.register.Register(beans))
+}
+
+//Register beans
+func (ioc *Ioc) RegisterBeans(beans []*Bean) {
+	ioc.appendBeans(ioc.register.RegisterBeans(beans))
+}
+
+func (ioc *Ioc) appendBeans(beans []*Bean) {
+	if len(beans) > 0 {
+		for _, bean := range beans {
+			ioc.beansN[bean.Name] = bean
+			ioc.beansT[bean.getAbstractType()] = bean
 		}
 	}
 }
 
-//Init process of application
-func (ioc *Ioc) InitProcess(ctx context.Context, bean Bean) {
-	if strings.EqualFold(bean.Class, "") {
+//Exec process of application
+func (ioc *Ioc) ExecProcess(ctx context.Context, process Process) {
+	if strings.EqualFold(process.Class, "") {
 		return
 	}
 
-	t := ioc.getType(bean.Class)
+	t := ioc.getType(process.Class)
 	if t == nil {
 		return
 	}
 
 	p := reflect.New(t)
 
-	ioc.wg.Add(1)
+	var wg sync.WaitGroup
+	
+	wg.Add(1)
 	go func() {
-		defer ioc.wg.Done()
-		for k, v := range bean.Params {
+		defer wg.Done()
+		for k, v := range process.Params {
 			setField(p, k, v)
 		}
 	}()
 
-	setField(p, NAME_KEY, bean.Name)
+	setField(p, NAME_KEY, process.Name)
 	setField(p, CTX_KEY, ctx)
 	setField(p, IOC_KEY, ioc)
 
-	ioc.wg.Wait()
+	wg.Wait()
 
 	// Do execute
 	var exec string
-	if !strings.EqualFold(bean.ExecuteMethod, "") {
-		exec = bean.ExecuteMethod
+	if !strings.EqualFold(process.ExecuteMethod, "") {
+		exec = process.ExecuteMethod
 	} else if p.MethodByName(EXEC_FUNC) != reflect.ValueOf(nil) {
 		exec = EXEC_FUNC
 	}
@@ -143,15 +152,11 @@ func (ioc *Ioc) InitProcess(ctx context.Context, bean Bean) {
 
 //Get instance by name
 func (ioc *Ioc) InsByName(name string) (interface{}) {
-	defer ioc.mutex.Unlock()
-	ioc.mutex.Lock()
 	return ioc.instanceByName(name)
 }
 
 //Get instance by Type
 func (ioc *Ioc) InsByType(t reflect.Type) (interface{}) {
-	defer ioc.mutex.Unlock()
-	ioc.mutex.Lock()
 	return ioc.instanceByType(t)
 }
 
@@ -182,6 +187,13 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	if t == nil {
 		return nil
 	}
+	
+	scope := SINGLETON
+	
+	if bean, ok := ioc.beansT[t]; ok {
+		t = bean.getConcreteType()
+		scope = bean.Scope
+	}
 	ins := reflect.New(t)
 
 	setField(ins, CTX_KEY, ctx)
@@ -192,34 +204,41 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 		cm.Call(nil)
 	}
 
+	var wg sync.WaitGroup
+	
 	//Inject construct params
 	for index := 0; index < t.NumField(); index++ {
-		f := ins.Elem().FieldByIndex([]int{index})
-		if !f.CanSet() {
-			continue
-		}
-		switch f.Kind() {
-		case reflect.Struct:
-			if i := ioc.instanceByType(f.Type()); i != nil {
-				f.Set(reflect.ValueOf(i).Elem())
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			f := ins.Elem().FieldByIndex([]int{index})
+			if !f.CanSet() {
+				return
 			}
-			break
-		case reflect.Ptr:
-			if i := ioc.instanceByType(f.Type().Elem()); i != nil {
-				f.Set(reflect.ValueOf(i))
-			}
-			break
-		case reflect.String:
-			if c, ok := ioc.imports[t.Name()]; ok {
-				if v, ok := c[t.Field(index).Name]; ok {
-					f.Set(reflect.ValueOf(v))
+			switch f.Kind() {
+			case reflect.Struct:
+				if i := ioc.instanceByType(f.Type()); i != nil {
+					f.Set(reflect.ValueOf(i).Elem())
 				}
+				return
+			case reflect.Ptr:
+				if i := ioc.instanceByType(f.Type().Elem()); i != nil {
+					f.Set(reflect.ValueOf(i))
+				}
+				return
+			case reflect.String:
+				if c, ok := ioc.imports[t.Name()]; ok {
+					if v, ok := c[t.Field(index).Name]; ok {
+						f.Set(reflect.ValueOf(v))
+					}
+				}
+				return
+			default:
+				return
 			}
-			break
-		default:
-			break
-		}
+		}(index)
 	}
+	wg.Wait()
 
 	//Execute init method of instance
 	im := ins.MethodByName(INIT_FUNC)
@@ -231,9 +250,11 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 		}
 	}
 
-	if ins.Interface() != nil {
+	if ins.Interface() != nil && strings.EqualFold(scope, SINGLETON) {
+		ioc.mutex.Lock()
 		ioc.insN[t.Name()] = ins.Interface()
 		ioc.insT[t] = ins.Interface()
+		ioc.mutex.Unlock()
 	}
 
 	return ins.Interface()
@@ -241,8 +262,8 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 
 //Get type of bean
 func (ioc *Ioc) getType(name string) reflect.Type{
-	if t, ok := ioc.typeN[name]; ok {
-		return t
+	if t, ok := ioc.beansN[name]; ok {
+		return t.getConcreteType()
 	}
 	return nil
 }

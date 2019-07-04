@@ -120,6 +120,6 @@ func (c *Config) Config(name string) interface{} {
 	return nil
 }
 
-func (c *Config) Beans(name string) []Bean{
+func (c *Config) Beans(name string) []Process{
 	return c.appConf.Process
 }

@@ -36,7 +36,7 @@ type HttpServer struct {
 	Route			string
 	Ctx             context.Context
 	Ioc 			*Ioc
-	router			Route
+	Router			Route
 	ser 			*http.Server
 	wg 				sync.WaitGroup
 }
@@ -51,85 +51,102 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	route := hs.router.Init(hs.Route, conf.Env)
+	hs.Router.InitRoute(hs.Route, conf.Env)
 
 	//Create route manager
 	mux := http.NewServeMux()
 
-	for u, a := range route.Actions {
-		uri, action := u, a
-		controller := reflect.ValueOf(hs.Ioc.InsByName(action.Controller))
-		if !controller.IsValid() {
-			panic(fmt.Sprint("Controller [", action.Controller, "] need register"))
-		}
-		method := controller.MethodByName(action.Action)
-		
-		if !method.IsValid() {
-			ilog.Error("Can not find method [", action.Action, "] in [", action.Controller, "]")
-		}
-		
-		//Get action interceptor list
-		interceptor := ActionInterceptor(a.Middleware, hs.Ioc)
-		
-		mux.HandleFunc(uri, func(w http.ResponseWriter, r *http.Request){
+	for _, a := range hs.Router.Actions {
+		hs.wg.Add(1)
+		go func(action *action) {
+			defer hs.wg.Done()
+			method := hs.extractMethod(action)
 
-			hs.wg.Add(1)
-
-			response := Response{
-				Header: make(map[string]string),
-			}
-			rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
+			//Get action interceptor list
+			interceptor := ActionInterceptor(action.Middleware, hs.Ioc)
 			
-			defer hs.output(w, &response)
-
-			for _, ins := range interceptor {
-				err := ins[0].Call([]reflect.Value{rr})[0].Interface()
-				if err != nil {
-					response.Data = err
-					break
-				}
-				defer ins[1].Call([]reflect.Value{rr, reflect.ValueOf(&response)})
-			}
-			
-			if !strings.EqualFold(r.Method, action.Method) {
-				response.Data = NewServerError("Method not allowed")
-			}
-			
-			if reflect.ValueOf(response.Data).Kind() == reflect.Invalid {
-				n := method.Type().NumIn()
-				if n > 2 {
-					panic("Action params must be empty or (*http.Request) or (*http.Request, http.ResponseWriter)")
-				}
-
-				var p, res []reflect.Value
-				if n == 2 {
-					p = []reflect.Value{rr, rw};
-				} else if n == 1 {
-					p = []reflect.Value{rr};
-				}
-				res = method.Call(p);
-
-				rl := len(res)
-
-				if rl == 0 {
-					response.Data = nil
-					return
-				}
-
-				if rl > 1 {
-					if _, ok := res[1].Interface().(error); ok {
-						response.Data = res[1].Interface()
-						return
-					}
-				}
-				response.Data = res[0].Interface()
-			}
-		})
+			mux.HandleFunc(action.Uri, hs.handler(action, method, interceptor))
+		}(a)
 	}
+	hs.wg.Wait()
 
 	hs.ser.Handler = mux
 	//Start http server
 	hs.start()
+}
+
+//Http handler
+func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor []IInterceptor) func(w http.ResponseWriter, r *http.Request){
+	return func(w http.ResponseWriter, r *http.Request){
+
+		hs.wg.Add(1)
+
+		response := &Response{
+			Header: make(map[string]string),
+		}
+		rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
+
+		defer hs.output(w, response)
+
+		if !strings.EqualFold(r.Method, action.Method) {
+			response.Data = "Method not allowed"
+			return
+		}
+
+		n := method.Type().NumIn()
+		if n > 2 {
+			panic("Action params must be (*http.Request) or (*http.Request, http.ResponseWriter)")
+		}
+
+		p := []reflect.Value{rr}
+		if n == 2 {
+			p[1] = rw
+		}
+
+		f := func(*http.Request) (*Response, error){
+			res := method.Call(p)
+			switch len(res) {
+			case 0:
+				return response, nil
+			case 1:
+				if err, ok := res[0].Interface().(error); ok {
+					return response, err
+				}
+				response.Data = res[0].Interface()
+				return response, nil
+			default:
+				err := res[1].Interface()
+				response.Data = res[0].Interface()
+				if err != nil {
+					return response, err.(error)
+				}
+				return response, nil
+			}
+		}
+
+		for _, i := range interceptor {
+			f = i.Handle(f)
+		}
+
+		_, err := f(r)
+		if err != nil {
+			response.Data = err.Error()
+		}
+	}
+}
+
+func (hs *HttpServer) extractMethod(a *action) reflect.Value{
+	c := reflect.ValueOf(hs.Ioc.InsByName(a.Controller))
+	if !c.IsValid() {
+		panic(fmt.Sprint("Controller [", a.Controller, "] need register"))
+	}
+	m := c.MethodByName(a.Action)
+
+	if !m.IsValid() {
+		panic(fmt.Sprint("Can not find method [", a.Action, "] in [", a.Controller, "]"))
+	}
+
+	return m
 }
 
 //Http server start

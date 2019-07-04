@@ -6,30 +6,28 @@ import (
 )
 
 type IInterceptor interface {
-	Enter(*http.Request) error
-	Exit(*http.Request, *Response)
+	Handle(func(*http.Request) (*Response, error)) func(*http.Request) (*Response, error)
 }
 
-func ActionInterceptor(interceptors []string, ioc *Ioc) [][]reflect.Value {
-	var list [][]reflect.Value
-	for _, name := range interceptors {
+func ActionInterceptor(interceptors []string, ioc *Ioc) []IInterceptor {
+	var list []IInterceptor
+	IType := reflect.TypeOf(new(IInterceptor)).Elem()
+	l := len(interceptors)
+	for i := l-1; i >= 0; i-- {
+		name := interceptors[i]
 		var t reflect.Type
-		if _, ok := ioc.typeN[name]; !ok {
+		if _, ok := ioc.beansN[name]; !ok {
 			continue
 		}
-		t = ioc.typeN[name]
-		if !t.Implements(reflect.TypeOf(new(IInterceptor)).Elem()) {
+		t = ioc.beansN[name].getConcreteType()
+		if !t.Implements(IType) {
 			continue
 		}
 		ins := ioc.InsByType(t)
 		if ins == nil {
 			continue
 		}
-		v := reflect.ValueOf(ins)
-		list = append(list, []reflect.Value{
-			v.MethodByName("Enter"),
-			v.MethodByName("Exit"),
-		})
+		list = append(list, ins.(IInterceptor))
 	}
 	return list
 }

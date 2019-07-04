@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"os"
-	"sync"
 )
 
 type routeConf struct {
@@ -28,19 +27,18 @@ type actionConf struct {
 
 type Route struct {
 	Groups		map[string]groupConf
-	Actions 	map[string]*action
-	mutex 		*sync.Mutex
-	wg			sync.WaitGroup
+	Actions 	[]*action
 }
 
 type action struct {
+	Uri 		string
 	Method 		string
 	Controller 	string
 	Action 		string
 	Middleware  []string
 }
 
-func (r *Route) Init(routeConfig string, env string) (route *Route){
+func (r *Route) InitRoute(routeConfig string, env string) {
 	projectPath, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -55,21 +53,20 @@ func (r *Route) Init(routeConfig string, env string) (route *Route){
 		panic("Route config extract fail")
 	}
 	r.Groups = make(map[string]groupConf)
-	r.Actions = make(map[string]*action)
-	r.mutex = new(sync.Mutex)
 	for _, gConf := range routeConf.Groups {
 		r.Groups[gConf.Name] = gConf
 	}
-	r.extract(routeConf.ActionConf)
-	return r
+	r.Actions = extract(routeConf.ActionConf, r.Groups)
 }
 
-func (r *Route) extract(actionConf map[string]actionConf) {
+func extract(actionConf map[string]actionConf, groups map[string]groupConf) []*action{
+	l := len(actionConf)
+	ch := make(chan *action, l)
+	var actions []*action
+	
 	for uri, conf := range actionConf {
 		u, c := uri, conf
-		r.wg.Add(1)
 		go func() {
-			defer r.wg.Done()
 			method, controller, deal, middleware := "get", "", "", []string{}
 			uArray := strings.Split(u, " ")
 			if len(uArray) == 2 {
@@ -80,17 +77,19 @@ func (r *Route) extract(actionConf map[string]actionConf) {
 				method = c.Method
 			}
 			if strings.EqualFold(c.Uses, "") {
+				ch <- &action{Uri:""}
 				return
 			}
 			pathArray := strings.Split(c.Uses, "@")
 			if len(pathArray) != 2 {
+				ch <- &action{Uri:""}
 				return
 			}
 			controller, deal = pathArray[0], pathArray[1]
 			if !strings.EqualFold(c.Group, "") {
 				groupNames := strings.Split(c.Group, "|")
 				for _, groupName := range groupNames {
-					if group, ok := r.Groups[groupName]; ok {
+					if group, ok := groups[groupName]; ok {
 						if !strings.EqualFold(group.Prefix, "") {
 							u = group.Prefix + u
 						}
@@ -103,15 +102,22 @@ func (r *Route) extract(actionConf map[string]actionConf) {
 			if !strings.EqualFold(c.Middleware, "") {
 				middleware = append(middleware, strings.Split(c.Middleware, "|")...)
 			}
-			r.mutex.Lock()
-			r.Actions[u] = &action{
+			ch <- &action{
+				Uri:u,
 				Method:method,
 				Controller:controller,
 				Action:deal,
 				Middleware:middleware,
 			}
-			r.mutex.Unlock()
 		}()
 	}
-	r.wg.Wait()
+	
+	for i := 0; i < l; i++ {
+		a := <-ch
+		if strings.EqualFold(a.Uri, "") {
+			continue
+		}
+		actions = append(actions, a)
+	}
+	return actions
 }
