@@ -37,7 +37,6 @@ func (dm *DbManager) GetDbConnection(name string) (db *sql.DB) {
 	if dm.connections[name] != nil {
 		return dm.connections[name]
 	}
-	ilog.Info("DB connection not exist for [", name, "]")
 	dm.connections[name] = dm.createConnection(name)
 	ilog.Info("DB connection create success for [", name, "]")
 	return dm.connections[name]

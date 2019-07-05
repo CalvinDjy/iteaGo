@@ -3,8 +3,8 @@ package itea
 type Application struct {
 	Process []Process				`yaml:"process"`
 	Database string					`yaml:"database"`
-	Import []string					`yaml:"import"`
 	Log Log							`yaml:"log,omitempty"`
+	Import []string					`yaml:"import"`
 }
 
 type Process struct {

@@ -6,7 +6,6 @@ import (
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"fmt"
 	"context"
-	"encoding/json"
 	"strings"
 )
 
@@ -30,20 +29,13 @@ type Redis struct {
 
 func (p *Redis) Construct() {
 	p.debug = p.Ctx.Value(DEBUG).(bool)
-	
-	var redisConf RedisConf
-	if c := conf.Config(REDIS_CONFIG).(*json.RawMessage); c != nil {
-		err := json.Unmarshal(*c, &redisConf)
-		if err != nil {
-			panic(err)
-		}
-	} else {
+
+	c := conf.Config(REDIS_CONFIG)
+	if c == nil {
 		panic("Can not find database config of redis!")
 	}
 
-	redisPool := redis.NewClient(p.initOpt(redisConf))
-
-	p.pool = redisPool
+	p.pool = redis.NewClient(p.initOpt(c.(RedisConf)))
 
 	//go func() {
 	//	for {

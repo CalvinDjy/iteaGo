@@ -152,11 +152,15 @@ func (ioc *Ioc) ExecProcess(ctx context.Context, process Process) {
 
 //Get instance by name
 func (ioc *Ioc) InsByName(name string) (interface{}) {
+	ioc.mutex.Lock()
+	defer ioc.mutex.Unlock()
 	return ioc.instanceByName(name)
 }
 
 //Get instance by Type
 func (ioc *Ioc) InsByType(t reflect.Type) (interface{}) {
+	ioc.mutex.Lock()
+	defer ioc.mutex.Unlock()
 	return ioc.instanceByType(t)
 }
 
@@ -204,41 +208,34 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 		cm.Call(nil)
 	}
 
-	var wg sync.WaitGroup
-	
 	//Inject construct params
 	for index := 0; index < t.NumField(); index++ {
-		wg.Add(1)
-		go func(index int) {
-			defer wg.Done()
-			f := ins.Elem().FieldByIndex([]int{index})
-			if !f.CanSet() {
-				return
+		f := ins.Elem().FieldByIndex([]int{index})
+		if !f.CanSet() {
+			continue
+		}
+		switch f.Kind() {
+		case reflect.Struct:
+			if i := ioc.instanceByType(f.Type()); i != nil {
+				f.Set(reflect.ValueOf(i).Elem())
 			}
-			switch f.Kind() {
-			case reflect.Struct:
-				if i := ioc.instanceByType(f.Type()); i != nil {
-					f.Set(reflect.ValueOf(i).Elem())
-				}
-				return
-			case reflect.Ptr:
-				if i := ioc.instanceByType(f.Type().Elem()); i != nil {
-					f.Set(reflect.ValueOf(i))
-				}
-				return
-			case reflect.String:
-				if c, ok := ioc.imports[t.Name()]; ok {
-					if v, ok := c[t.Field(index).Name]; ok {
-						f.Set(reflect.ValueOf(v))
-					}
-				}
-				return
-			default:
-				return
+			break
+		case reflect.Ptr:
+			if i := ioc.instanceByType(f.Type().Elem()); i != nil {
+				f.Set(reflect.ValueOf(i))
 			}
-		}(index)
+			break
+		case reflect.String:
+			if c, ok := ioc.imports[t.Name()]; ok {
+				if v, ok := c[t.Field(index).Name]; ok {
+					f.Set(reflect.ValueOf(v))
+				}
+			}
+			break
+		default:
+			break
+		}
 	}
-	wg.Wait()
 
 	//Execute init method of instance
 	im := ins.MethodByName(INIT_FUNC)
@@ -251,10 +248,8 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	}
 
 	if ins.Interface() != nil && strings.EqualFold(scope, SINGLETON) {
-		ioc.mutex.Lock()
 		ioc.insN[t.Name()] = ins.Interface()
 		ioc.insT[t] = ins.Interface()
-		ioc.mutex.Unlock()
 	}
 
 	return ins.Interface()

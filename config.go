@@ -44,8 +44,8 @@ func InitConf(appConfig string) *Config {
 	}
 	config.wg.Add(3)
 	go config.dbConfig()
-	go config.importConfig()
 	go config.logConfig()
+	go config.importConfig()
 	config.wg.Wait()
 	return config
 }
@@ -87,29 +87,23 @@ func (c *Config) dbConfig() {
 	}
 }
 
+//Extract log config
+func (c *Config) logConfig() {
+	defer c.wg.Done()
+	if !strings.EqualFold(c.appConf.Log.Type, "") {
+		c.config[LOG_CONFIG] = c.appConf.Log
+	}
+}
+
 //Extract import config
 func (c *Config) importConfig() {
 	defer c.wg.Done()
 	if len(c.appConf.Import) > 0 {
 		pathList := c.appConf.Import
-		if pathList != nil {
-			for i, _ := range pathList {
-				pathList[i] = c.projectPath + strings.Replace(pathList[i], SEARCH_ENV, c.Env, -1)
-			}
-			mutex.Lock()
-			c.config[IMPORT_CONFIG] = pathList
-			mutex.Unlock()
+		for i, _ := range pathList {
+			pathList[i] = c.projectPath + strings.Replace(pathList[i], SEARCH_ENV, c.Env, -1)
 		}
-	}
-}
-
-//Extract log config
-func (c *Config) logConfig() {
-	defer c.wg.Done()
-	if !strings.EqualFold(c.appConf.Log.Type, "") {
-		mutex.Lock()
-		c.config[LOG_CONFIG] = c.appConf.Log
-		mutex.Unlock()
+		c.config[IMPORT_CONFIG] = pathList
 	}
 }
 
