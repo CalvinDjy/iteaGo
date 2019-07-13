@@ -6,7 +6,7 @@ import (
 )
 
 type IInterceptor interface {
-	Handle(func(*http.Request) (*Response, error)) func(*http.Request) (*Response, error)
+	Handle(func(*http.Request, *Response) error) func(*http.Request, *Response) error
 }
 
 func ActionInterceptor(interceptors []string, ioc *Ioc) []IInterceptor {

@@ -1,22 +1,15 @@
 package itea
 
 import (
-	"gopkg.in/yaml.v2"
 	"context"
 	"reflect"
 	"sync"
 	"strings"
-	"io/ioutil"
 )
 
 const (
-	PROCESS_CONFIG 	= "process"
-	DB_CONFIG 		= "database"
-	IMPORT_CONFIG 	= "import"
 	LOG_CONFIG 		= "log"
 	DEBUG			= "debug"
-	CONNECTION_CONFIG		= "connections"
-	REDIS_CONFIG			= "redis"
 
 	NAME_KEY 		= "Name"
 	IOC_KEY 		= "Ioc"
@@ -32,7 +25,6 @@ type Ioc struct {
 	beansT				map[reflect.Type]*Bean
 	insN 				map[string]interface{}
 	insT 				map[reflect.Type]interface{}
-	imports				map[string]map[string]string
 	mutex 				*sync.Mutex
 }
 
@@ -46,47 +38,10 @@ func NewIoc() (*Ioc) {
 		insN:make(map[string]interface{}),
 		insT:make(map[reflect.Type]interface{}),
 		mutex:new(sync.Mutex),
-		imports:make(map[string]map[string]string),
 	}
 	
-	var wg sync.WaitGroup
-	
-	wg.Add(2)
-	
-	go func() {
-		defer wg.Done()
-		imp := conf.Config(IMPORT_CONFIG)
-		if imp != nil && len(imp.([]string)) != 0 {
-			ioc.importConfig(imp.([]string))
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		ioc.appendBeans(register.Init())
-	}()
-
-	wg.Wait()
-
+	ioc.appendBeans(register.Init())
 	return ioc
-}
-
-//Import config
-func (ioc *Ioc) importConfig(imports []string) {
-	for _, filePath := range imports {
-		dat, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			panic("Import [" + filePath + "] config not find")
-		}
-		var imconfig map[string]map[string]string
-		err = yaml.Unmarshal(dat, &imconfig)
-		if err != nil {
-			panic("Import [" + filePath + "] config extract error")
-		}
-		for k, v := range imconfig {
-			ioc.imports[k] = v
-		}
-	}
 }
 
 //Register beans
@@ -109,7 +64,7 @@ func (ioc *Ioc) appendBeans(beans []*Bean) {
 }
 
 //Exec process of application
-func (ioc *Ioc) ExecProcess(ctx context.Context, process Process) {
+func (ioc *Ioc) ExecProcess(ctx context.Context, process *Process) {
 	if strings.EqualFold(process.Class, "") {
 		return
 	}
@@ -216,18 +171,22 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 		}
 		switch f.Kind() {
 		case reflect.Struct:
-			if i := ioc.instanceByType(f.Type()); i != nil {
-				f.Set(reflect.ValueOf(i).Elem())
+			if tag := t.Field(index).Tag.Get("wired"); !strings.EqualFold(tag, "") {
+				if i := ioc.instanceByType(f.Type()); i != nil {
+					f.Set(reflect.ValueOf(i).Elem())
+				}
 			}
 			break
 		case reflect.Ptr:
-			if i := ioc.instanceByType(f.Type().Elem()); i != nil {
-				f.Set(reflect.ValueOf(i))
+			if tag := t.Field(index).Tag.Get("wired"); !strings.EqualFold(tag, "") {
+				if i := ioc.instanceByType(f.Type().Elem()); i != nil {
+					f.Set(reflect.ValueOf(i))
+				}
 			}
 			break
 		case reflect.String:
-			if c, ok := ioc.imports[t.Name()]; ok {
-				if v, ok := c[t.Field(index).Name]; ok {
+			if tag := t.Field(index).Tag.Get("value"); !strings.EqualFold(tag, "") {
+				if v := config.GetString(tag); !strings.EqualFold(v, "") {
 					f.Set(reflect.ValueOf(v))
 				}
 			}

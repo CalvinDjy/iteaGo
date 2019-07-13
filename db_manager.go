@@ -10,20 +10,38 @@ import (
 )
 
 const (
+	CONNECTION_KEY = "connections"
 	MAX_OPEN_CONNS = 20
 	MAX_IDLE_CONNS = 10
 	CONN_MAX_LIFE_TIME = 14400 * time.Second
 )
 
+type DatabaseConf struct {
+	Driver 			string
+	Ip 				string
+	Port 			string
+	Database 		string
+	Username 		string
+	Password 		string
+	Charset 		string
+	MaxConn 		int
+	MaxIdle 		int
+	ConnMaxLift 	int
+}
+
 type DbManager struct {
-	databases 		map[string]DatabaseConf
+	databases 		map[string]*DatabaseConf
 	connections 	map[string]*sql.DB
 	mutex 			*sync.Mutex
 }
 
 func (dm *DbManager) Construct() {
-	if c := conf.Config(CONNECTION_CONFIG); c != nil {
-		dm.databases = c.(map[string]DatabaseConf)
+	if c := config.GetStructMap(fmt.Sprintf("%s.%s", DATABASE_KEY, CONNECTION_KEY), DatabaseConf{}); c != nil {
+		dbconf := make(map[string]*DatabaseConf)
+		for db, dc := range c {
+			dbconf[db] = dc.(*DatabaseConf)
+		}
+		dm.databases = dbconf
 	} else {
 		panic("Can not find database config of connections!")
 	}
@@ -75,7 +93,7 @@ func (dm *DbManager) createConnection(name string) (db *sql.DB) {
 	}
 }
 
-func (dm *DbManager) dataSource(dbconfig DatabaseConf) string {
+func (dm *DbManager) dataSource(dbconfig *DatabaseConf) string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s",
 		dbconfig.Username, dbconfig.Password, dbconfig.Ip, dbconfig.Port, dbconfig.Database, dbconfig.Charset)
 }

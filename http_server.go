@@ -51,7 +51,7 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	hs.Router.InitRoute(hs.Route, conf.Env)
+	hs.Router.InitRoute(hs.Route, config.Env)
 
 	//Create route manager
 	mux := http.NewServeMux()
@@ -100,27 +100,27 @@ func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor 
 
 		p := []reflect.Value{rr}
 		if n == 2 {
-			p[1] = rw
+			p = append(p, rw)
 		}
 
-		f := func(*http.Request) (*Response, error){
+		f := func(request *http.Request, response *Response) error {
 			res := method.Call(p)
 			switch len(res) {
 			case 0:
-				return response, nil
+				return nil
 			case 1:
 				if err, ok := res[0].Interface().(error); ok {
-					return response, err
+					return err
 				}
 				response.Data = res[0].Interface()
-				return response, nil
+				return nil
 			default:
 				err := res[1].Interface()
 				response.Data = res[0].Interface()
 				if err != nil {
-					return response, err.(error)
+					return err.(error)
 				}
-				return response, nil
+				return nil
 			}
 		}
 
@@ -128,7 +128,7 @@ func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor 
 			f = i.Handle(f)
 		}
 
-		_, err := f(r)
+		err := f(r, response)
 		if err != nil {
 			response.Data = err.Error()
 		}

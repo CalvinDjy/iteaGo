@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	REDIS_KEY = "redis"
 	REDIS_HOST = ""
 	REDIS_PORT = "6379"
 	REDIS_DATABASE = 0
@@ -21,21 +22,33 @@ const (
 	REDIS_POOL_IDLE_CHECK_FREQUENCY = 60
 )
 
+type RedisConf struct {
+	Host 			string
+	Port 			string
+	Database 		int
+	Password 		string
+	MaxIdle 		int
+	MaxActive 		int
+	IdleTimeout 	int
+	MaxConnLifetime int
+	IdleCheck 		int
+}
+
 type Redis struct {
-	pool *redis.Client
-	Ctx context.Context
-	debug bool
+	pool 			*redis.Client
+	Ctx 			context.Context
+	debug 			bool
 }
 
 func (p *Redis) Construct() {
 	p.debug = p.Ctx.Value(DEBUG).(bool)
 
-	c := conf.Config(REDIS_CONFIG)
+	c := config.GetStruct(fmt.Sprintf("%s.%s", DATABASE_KEY, REDIS_KEY), RedisConf{})
 	if c == nil {
 		panic("Can not find database config of redis!")
 	}
 
-	p.pool = redis.NewClient(p.initOpt(c.(RedisConf)))
+	p.pool = redis.NewClient(p.initOpt(c.(*RedisConf)))
 
 	//go func() {
 	//	for {
@@ -45,7 +58,7 @@ func (p *Redis) Construct() {
 	//}()
 }
 
-func (p *Redis) initOpt(conf RedisConf) *redis.Options {
+func (p *Redis) initOpt(conf *RedisConf) *redis.Options {
 	host, port := REDIS_HOST, REDIS_PORT
 	if !strings.EqualFold(conf.Host, "") {
 		host = conf.Host

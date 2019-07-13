@@ -9,26 +9,33 @@ import (
 )
 
 var (
-	wg 		sync.WaitGroup
-	sigs 	chan os.Signal
-	s		chan bool
-	mutex 	*sync.Mutex
-	ctx		context.Context
-	conf	*Config
+	wg 				sync.WaitGroup
+	sigs 			chan os.Signal
+	s				chan bool
+	mutex 			*sync.Mutex
+	ctx				context.Context
+	config			*Config
 )
 
+type Process struct {
+	Name 			string
+	Class 			string
+	ExecuteMethod 	string
+	Params 			map[string]interface{}
+}
+
 type Itea struct {
-	process	[]Process
-	ioc 	*Ioc
+	process			[]interface{}
+	ioc 			*Ioc
 }
 
 //Create Itea
 func New(appConfig string) *Itea {
 	mutex = new(sync.Mutex)
-	conf = InitConf(appConfig)
+	config = InitConf(appConfig)
 	ctx = context.WithValue(context.Background(), DEBUG, false)
 	InitLog()
-	if process := conf.Beans(PROCESS_CONFIG); process != nil {
+	if process := config.GetStructArray("application.process", Process{}); process != nil {
 		return &Itea{
 			process: process,
 			ioc: NewIoc(),
@@ -40,10 +47,10 @@ func New(appConfig string) *Itea {
 
 //Get environment
 func Env() string {
-	if conf == nil {
+	if config == nil {
 		panic("Please init itea")
 	}
-	return conf.Env
+	return config.Env
 }
 
 //Debug
@@ -110,7 +117,7 @@ func (i *Itea) start() {
 		}
 	}()
 	for _, p := range i.process {
-		var process = p
+		var process = p.(*Process)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -140,7 +147,7 @@ type IteaTest struct {
 //Create IteaTest
 func NewIteaTest(appConfig string) *IteaTest {
 	mutex = new(sync.Mutex)
-	conf = InitConf(appConfig)
+	config = InitConf(appConfig)
 	ctx = context.WithValue(context.Background(), DEBUG, true)
 	InitLog()
 	return &IteaTest{

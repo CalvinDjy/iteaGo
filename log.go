@@ -3,12 +3,21 @@ package itea
 import (
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"strings"
+	"fmt"
 )
+
+const LOG_KEY = "log"
+
+type Log struct {
+	Type 		string
+	Logfile 	string
+	Rotate 		bool
+}
 
 func InitLog() {
 	logtype, logfile, rotate := "", "", false
-	if conf.Config(LOG_CONFIG) != nil {
-		logConf := conf.Config(LOG_CONFIG).(Log)
+	if c := config.GetStruct(fmt.Sprintf("%s.%s", config.FileName, LOG_KEY), Log{}); c != nil {
+		logConf := c.(*Log)
 		if !strings.EqualFold(logConf.Type, "") {
 			logtype = logConf.Type
 		}
