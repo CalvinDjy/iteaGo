@@ -165,7 +165,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 
 	//Inject construct params
 	for index := 0; index < t.NumField(); index++ {
-		f := ins.Elem().FieldByIndex([]int{index})
+		f := ins.Elem().Field(index)
 		if !f.CanSet() {
 			continue
 		}

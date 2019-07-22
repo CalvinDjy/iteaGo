@@ -184,7 +184,10 @@ func (c *Config) GetString(key string) string {
 	if v == nil {
 		return ""
 	}
-	return v.(string)
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
 }
 
 //Get config array
@@ -251,4 +254,24 @@ func (c *Config) GetStructMap(key string, s interface{}) map[string]interface{} 
 		return m
 	}
 	return nil
+}
+
+func String(key string) string {
+	return config.GetString(key)
+}
+
+func Array(key string) []interface{} {
+	return config.GetArray(key)
+}
+
+func Struct(key string, s interface{}) interface{} {
+	return config.GetStruct(key, s)
+}
+
+func StructArray(key string, s interface{}) []interface{} {
+	return config.GetStructArray(key, s)
+}
+
+func StructMap(key string, s interface{}) map[string]interface{} {
+	return config.GetStructMap(key, s)
 }

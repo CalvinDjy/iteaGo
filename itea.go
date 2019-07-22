@@ -45,14 +45,6 @@ func New(appConfig string) *Itea {
 	}
 }
 
-//Get environment
-func Env() string {
-	if config == nil {
-		panic("Please init itea")
-	}
-	return config.Env
-}
-
 //Debug
 func (i *Itea) Debug() *Itea {
 	ctx = context.WithValue(ctx, DEBUG, true)
@@ -138,6 +130,14 @@ func (i *Itea) start() {
 //Stop itea
 func (i *Itea) stop() {
 	stopProcess()
+}
+
+//Get environment
+func Env() string {
+	if config == nil {
+		panic("Please init itea")
+	}
+	return config.Env
 }
 
 type IteaTest struct {
