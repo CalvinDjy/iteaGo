@@ -5,14 +5,13 @@ import (
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"os"
 	"sync"
-	"fmt"
 )
 
+const ITEAGO_VERSION = "v0.4.5"
+
 var (
-	wg 				sync.WaitGroup
 	sigs 			chan os.Signal
 	s				chan bool
-	mutex 			*sync.Mutex
 	ctx				context.Context
 	config			*Config
 )
@@ -31,9 +30,8 @@ type Itea struct {
 
 //Create Itea
 func New(appConfig string) *Itea {
-	mutex = new(sync.Mutex)
 	config = InitConf(appConfig)
-	ctx = context.WithValue(context.Background(), DEBUG, false)
+	ctx = context.Background()
 	InitLog()
 	if process := config.GetStructArray("application.process", Process{}); process != nil {
 		return &Itea{
@@ -79,17 +77,15 @@ func (i *Itea) RegisterBean(beans ...[]*Bean) *Itea {
 
 //Run Itea
 func (i *Itea) Run() {
-	num := len(os.Args)
-	if num <= 1 {
-		i.start()
-	}
-	switch os.Args[1] {
-	case "start":
-		i.start()
-	case "stop":
+	switch true {
+	case Stop:
 		i.stop()
-	default:
-		fmt.Println("error cmd")
+		break
+	case Help:
+		break
+	case Start:
+		i.start()
+		break
 	}
 }
 
@@ -108,6 +104,8 @@ func (i *Itea) start() {
 			stop()
 		}
 	}()
+
+	var wg sync.WaitGroup
 	for _, p := range i.process {
 		var process = p.(*Process)
 		wg.Add(1)
@@ -132,21 +130,12 @@ func (i *Itea) stop() {
 	stopProcess()
 }
 
-//Get environment
-func Env() string {
-	if config == nil {
-		panic("Please init itea")
-	}
-	return config.Env
-}
-
 type IteaTest struct {
 	Ioc 	*Ioc
 }
 
 //Create IteaTest
 func NewIteaTest(appConfig string) *IteaTest {
-	mutex = new(sync.Mutex)
 	config = InitConf(appConfig)
 	ctx = context.WithValue(context.Background(), DEBUG, true)
 	InitLog()

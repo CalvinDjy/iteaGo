@@ -41,7 +41,9 @@ type Redis struct {
 }
 
 func (p *Redis) Construct() {
-	p.debug = p.Ctx.Value(DEBUG).(bool)
+	if d, ok := p.Ctx.Value(DEBUG).(bool); ok {
+		p.debug = d
+	}
 
 	c := config.GetStruct(fmt.Sprintf("%s.%s", DATABASE_KEY, REDIS_KEY), RedisConf{})
 	if c == nil {

@@ -51,7 +51,7 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	hs.Router.InitRoute(hs.Route, config.Env)
+	hs.Router.InitRoute(hs.Route, Env)
 
 	//Create route manager
 	mux := http.NewServeMux()

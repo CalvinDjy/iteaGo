@@ -1,15 +1,16 @@
 package itea
 
 import (
+	"flag"
+	"fmt"
+	"github.com/goinggo/mapstructure"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"sync"
-	"fmt"
-	"github.com/goinggo/mapstructure"
-	"reflect"
 )
 
 const (
@@ -19,15 +20,32 @@ const (
 	DATABASE_KEY	= "database"
 )
 
-//Application proj base path
-var projpath string
+var (
+	Help		bool
+	Start 		bool
+	Stop 		bool
+	Env 		string	//Environment
+	projpath 	string	//Application proj base path
+)
 
-//Environment
-var env string
+func init ()  {
+	flag.BoolVar(&Help, "h", false, "Get help")
+	flag.BoolVar(&Start, "start", true, "Start application")
+	flag.BoolVar(&Stop, "stop", false, "Stop application")
+	flag.StringVar(&Env, "e", DEFAULT_ENV, "Set application environment")
+	flag.Parse()
+	if Help {
+		fmt.Fprintf(os.Stderr, `iteaGo version: iteaGo/%s
+Usage: main [-start|-stop] [-e env]
+Options:
+`, ITEAGO_VERSION)
+		flag.PrintDefaults()
+	}
+}
 
 //Get file path
 func filePath(f string) string {
-	return projpath + strings.Replace(f, SEARCH_ENV, env, -1)
+	return projpath + strings.Replace(f, SEARCH_ENV, Env, -1)
 }
 
 //Get file name
@@ -58,25 +76,7 @@ func decode(v interface{}, t reflect.Type) (interface{}, error){
 	return ins, nil
 }
 
-//Env
-func getenv() string {
-	num := len(os.Args)
-	if num <= 1 {
-		return DEFAULT_ENV
-	}
-	for i, arg := range os.Args {
-		if !strings.EqualFold(arg, "-e") {
-			continue
-		}
-		if i + 1 <= num - 1 {
-			return os.Args[i + 1]
-		}
-	}
-	return DEFAULT_ENV
-}
-
 type Config struct {
-	Env 			string
 	FileName 		string
 	config			map[interface{}]interface{}
 }
@@ -87,7 +87,6 @@ func InitConf(file string) *Config {
 	if err != nil {
 		panic(err)
 	}
-	env = getenv()
 	dat, err := ioutil.ReadFile(filePath(file))
 	if err != nil {
 		panic("Application config not find")
@@ -100,7 +99,6 @@ func InitConf(file string) *Config {
 
 	FileName := fileName(file)
 	c := &Config{
-		Env: env,
 		FileName: FileName,
 		config: make(map[interface{}]interface{}),
 	}
