@@ -74,8 +74,6 @@ func (s *Scheduler) stop() {
 			s.cron.Stop()
 			ilog.Info("Scheduler stop success")
 			return
-		default:
-			break
 		}
 	}
 }

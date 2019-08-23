@@ -68,6 +68,7 @@ func (hs *HttpServer) Execute() {
 			mux.HandleFunc(action.Uri, hs.handler(action, method, interceptor))
 		}(a)
 	}
+	
 	hs.wg.Wait()
 
 	hs.ser.Handler = mux
@@ -162,8 +163,7 @@ func (hs *HttpServer) start() {
 	go hs.stop()
 
 	ilog.Info("=== Http server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
-	err := hs.ser.ListenAndServe()
-	if err != nil {
+	if err := hs.ser.ListenAndServe(); err != nil {
 		ilog.Info("=== Http server [", hs.Name, "] stop [", err, "] ===")
 	}
 }
@@ -179,8 +179,6 @@ func (hs *HttpServer) stop() {
 			hs.ser.Shutdown(hs.Ctx)
 			ilog.Info("Http server stop success")
 			return
-		default:
-			break
 		}
 	}
 }

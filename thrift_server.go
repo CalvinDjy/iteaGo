@@ -37,12 +37,10 @@ func (ts *ThriftServer) Execute() {
 	go ts.stop()
 
 	ilog.Info("=== Thrift server [", ts.Name, "] start [", addr, "] ===")
-	err = ts.ser.Serve()
-	if err != nil {
+	if err = ts.ser.Serve(); err != nil {
 		ilog.Error(err)
 		return
 	}
-	
 }
 
 //Thrift processor
@@ -78,8 +76,6 @@ func (ts *ThriftServer) stop() {
 			ts.ser.Stop()
 			ilog.Info("Thrift server stop success")
 			return
-		default:
-			break
 		}
 	}
 }
