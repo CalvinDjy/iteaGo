@@ -94,6 +94,8 @@ func (i *Itea) start() {
 	go logProcessInfo()
 
 	s = make(chan bool)
+	defer close(s)
+
 	go processSignal()
 
 	ctx, stop := context.WithCancel(ctx)
@@ -119,6 +121,7 @@ func (i *Itea) start() {
 	ilog.Info("Itea stop success. Good bye ")
 	
 	if ilog.Done() {
+		close(sigs)
 		removePid()
 		os.Exit(0)
 	}

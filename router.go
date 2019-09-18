@@ -62,6 +62,8 @@ func (r *Route) InitRoute(routeConfig string, env string) {
 func extract(actionConf map[string]actionConf, groups map[string]groupConf) []*action{
 	l := len(actionConf)
 	ch := make(chan *action, l)
+	defer close(ch)
+	
 	var actions []*action
 	
 	for uri, conf := range actionConf {

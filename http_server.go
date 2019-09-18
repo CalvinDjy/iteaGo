@@ -68,7 +68,7 @@ func (hs *HttpServer) Execute() {
 			mux.HandleFunc(action.Uri, hs.handler(action, method, interceptor))
 		}(a)
 	}
-	
+
 	hs.wg.Wait()
 
 	hs.ser.Handler = mux

@@ -149,6 +149,7 @@ func (c *Config) importConfig() {
 	l := len(imp)
 	
 	ch := make(chan []interface{}, l)
+	defer close(ch)
 	
 	for _, f := range imp {
 		go func(f string) {
