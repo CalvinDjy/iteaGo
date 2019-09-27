@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	CONNECTION_KEY = "connections"
-	MAX_OPEN_CONNS = 20
-	MAX_IDLE_CONNS = 10
-	CONN_MAX_LIFE_TIME = 14400 * time.Second
+	CONNECTION_KEY 		= "connections"
+	MAX_OPEN_CONNS 		= 20
+	MAX_IDLE_CONNS 		= 10
+	CONN_MAX_LIFE_TIME 	= 14400 * time.Second
 )
 
 type DatabaseConf struct {

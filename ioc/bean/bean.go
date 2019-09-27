@@ -3,12 +3,12 @@ package bean
 import "reflect"
 
 type Bean struct {
-	Name string
-	Scope string
-	Abstract interface{}
-	Concrete interface{}
-	abstractType reflect.Type
-	concreteType reflect.Type
+	Name 			string
+	Scope 			string
+	Abstract 		interface{}
+	Concrete 		interface{}
+	abstractType 	reflect.Type
+	concreteType 	reflect.Type
 }
 
 func (b *Bean)SetAbstractType(t reflect.Type) {

@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	GET_REQUEST_TIMEOUT = 3
-	POST_REQUEST_TIMEOUT = 5
+	GET_REQUEST_TIMEOUT 	= 3
+	POST_REQUEST_TIMEOUT 	= 5
 )
 
 type HttpClient struct {
-	Ctx context.Context
-	debug bool
+	Ctx 	context.Context
+	debug 	bool
 }
 
 func (c *HttpClient) Construct() {

@@ -21,8 +21,8 @@ const (
 )
 
 type Response struct {
-	Data interface{}
-	Header map[string]string
+	Data 	interface{}
+	Header 	map[string]string
 }
 
 func (r *Response) SetHeader(key string, value string) {

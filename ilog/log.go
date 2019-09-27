@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	loggor ILog
+	loggor 	ILog
 	logfile string
-	rotate bool
+	rotate 	bool
 )
 
 const (

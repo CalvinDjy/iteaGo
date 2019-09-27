@@ -9,21 +9,21 @@ import (
 )
 
 type routeConf struct {
-	Groups []groupConf					`yaml:"groups"`
-	ActionConf map[string]actionConf	`yaml:"action"`
+	Groups 		[]groupConf				`yaml:"groups"`
+	ActionConf 	map[string]actionConf	`yaml:"action"`
 }
 
 type groupConf struct {
-	Name string						`yaml:"name"`
-	Prefix string					`yaml:"prefix"`
-	Middleware string				`yaml:"middleware"`
+	Name 		string					`yaml:"name"`
+	Prefix 		string					`yaml:"prefix"`
+	Middleware 	string					`yaml:"middleware"`
 }
 
 type actionConf struct {
-	Method string					`yaml:"method"`
-	Uses string						`yaml:"uses"`
-	Middleware string				`yaml:"middleware"`
-	Group string					`yaml:"group"`
+	Method 		string					`yaml:"method"`
+	Uses 		string					`yaml:"uses"`
+	Middleware 	string					`yaml:"middleware"`
+	Group 		string					`yaml:"group"`
 }
 
 type Route struct {
