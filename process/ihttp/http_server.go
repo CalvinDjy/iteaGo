@@ -1,16 +1,18 @@
-package itea
+package ihttp
 
 import (
-	"net/http"
-	"time"
-	"github.com/CalvinDjy/iteaGo/ilog"
-	"reflect"
-	"io"
-	"github.com/json-iterator/go"
-	"fmt"
 	"context"
-	"sync"
+	"fmt"
+	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/ioc/iface"
+	"github.com/CalvinDjy/iteaGo/system"
+	"github.com/json-iterator/go"
+	"io"
+	"net/http"
+	"reflect"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -35,7 +37,7 @@ type HttpServer struct {
 	WriteTimeout 	int
 	Route			string
 	Ctx             context.Context
-	Ioc 			*Ioc
+	Ioc 			iface.IIoc
 	Router			Route
 	ser 			*http.Server
 	wg 				sync.WaitGroup
@@ -51,7 +53,7 @@ func (hs *HttpServer) Execute() {
 	}
 
 	//Init route
-	hs.Router.InitRoute(hs.Route, Env)
+	hs.Router.InitRoute(hs.Route, system.Env)
 
 	//Create route manager
 	mux := http.NewServeMux()
@@ -162,9 +164,9 @@ func (hs *HttpServer) start() {
 
 	go hs.stop()
 
-	ilog.Info("=== Http server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
+	ilog.Info("=== 【Http】Server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
 	if err := hs.ser.ListenAndServe(); err != nil {
-		ilog.Info("=== Http server [", hs.Name, "] stop [", err, "] ===")
+		ilog.Info("http server [", hs.Name, "] stop [", err, "]")
 	}
 }
 

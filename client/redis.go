@@ -1,12 +1,14 @@
-package itea
+package client
 
 import (
-	"github.com/go-redis/redis"
-	"time"
-	"github.com/CalvinDjy/iteaGo/ilog"
-	"fmt"
 	"context"
+	"fmt"
+	"github.com/CalvinDjy/iteaGo/constant"
+	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/system"
+	"github.com/go-redis/redis"
 	"strings"
+	"time"
 )
 
 const (
@@ -41,11 +43,11 @@ type Redis struct {
 }
 
 func (p *Redis) Construct() {
-	if d, ok := p.Ctx.Value(DEBUG).(bool); ok {
+	if d, ok := p.Ctx.Value(constant.DEBUG).(bool); ok {
 		p.debug = d
 	}
 
-	c := config.GetStruct(fmt.Sprintf("%s.%s", DATABASE_KEY, REDIS_KEY), RedisConf{})
+	c := system.Conf.GetStruct(fmt.Sprintf("%s.%s", constant.DATABASE_KEY, REDIS_KEY), RedisConf{})
 	if c == nil {
 		panic("Can not find database config of redis!")
 	}

@@ -1,12 +1,14 @@
-package itea
+package client
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/CalvinDjy/iteaGo/ilog"
-	"time"
-	"sync"
 	"fmt"
+	"github.com/CalvinDjy/iteaGo/constant"
+	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/system"
+	_ "github.com/go-sql-driver/mysql"
+	"sync"
+	"time"
 )
 
 const (
@@ -36,7 +38,7 @@ type DbManager struct {
 }
 
 func (dm *DbManager) Construct() {
-	if c := config.GetStructMap(fmt.Sprintf("%s.%s", DATABASE_KEY, CONNECTION_KEY), DatabaseConf{}); c != nil {
+	if c := system.Conf.GetStructMap(fmt.Sprintf("%s.%s", constant.DATABASE_KEY, CONNECTION_KEY), DatabaseConf{}); c != nil {
 		dbconf := make(map[string]*DatabaseConf)
 		for db, dc := range c {
 			dbconf[db] = dc.(*DatabaseConf)

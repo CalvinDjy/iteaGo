@@ -1,40 +1,42 @@
-package itea
+package ioc
 
 import (
 	"context"
+	"github.com/CalvinDjy/iteaGo/ioc/bean"
+	"github.com/CalvinDjy/iteaGo/process"
+	"github.com/CalvinDjy/iteaGo/system"
 	"reflect"
-	"sync"
 	"strings"
+	"sync"
 )
 
 const (
-	LOG_CONFIG 		= "log"
-	DEBUG			= "debug"
-
 	NAME_KEY 		= "Name"
 	IOC_KEY 		= "Ioc"
 	CTX_KEY 		= "Ctx"
 	CONSTRUCT_FUNC 	= "Construct"
 	INIT_FUNC 		= "Init"
 	EXEC_FUNC 		= "Execute"
-)
+) 
 
 type Ioc struct {
+	ctx 				context.Context
 	register 			*Register
-	beansN				map[string]*Bean
-	beansT				map[reflect.Type]*Bean
+	beansN				map[string]*bean.Bean
+	beansT				map[reflect.Type]*bean.Bean
 	insN 				map[string]interface{}
 	insT 				map[reflect.Type]interface{}
 	mutex 				*sync.Mutex
 }
 
 //Create ioc
-func NewIoc() (*Ioc) {
+func NewIoc(ctx context.Context) *Ioc {
 	register := NewRegister()
 	ioc := &Ioc{
+		ctx:ctx,
 		register:register,
-		beansN:make(map[string]*Bean),
-		beansT:make(map[reflect.Type]*Bean),
+		beansN:make(map[string]*bean.Bean),
+		beansT:make(map[reflect.Type]*bean.Bean),
 		insN:make(map[string]interface{}),
 		insT:make(map[reflect.Type]interface{}),
 		mutex:new(sync.Mutex),
@@ -50,21 +52,21 @@ func (ioc *Ioc) Register(beans [] interface{}) {
 }
 
 //Register beans
-func (ioc *Ioc) RegisterBeans(beans []*Bean) {
+func (ioc *Ioc) RegisterBeans(beans []*bean.Bean) {
 	ioc.appendBeans(ioc.register.RegisterBeans(beans))
 }
 
-func (ioc *Ioc) appendBeans(beans []*Bean) {
+func (ioc *Ioc) appendBeans(beans []*bean.Bean) {
 	if len(beans) > 0 {
 		for _, bean := range beans {
 			ioc.beansN[bean.Name] = bean
-			ioc.beansT[bean.getAbstractType()] = bean
+			ioc.beansT[bean.GetAbstractType()] = bean
 		}
 	}
 }
 
 //Exec process of application
-func (ioc *Ioc) ExecProcess(ctx context.Context, process *Process) {
+func (ioc *Ioc) ExecProcess(ctx context.Context, process *process.Process) {
 	if strings.EqualFold(process.Class, "") {
 		return
 	}
@@ -105,21 +107,28 @@ func (ioc *Ioc) ExecProcess(ctx context.Context, process *Process) {
 	}
 }
 
+func (ioc *Ioc) BeansByName(name string) *bean.Bean {
+	if b, ok := ioc.beansN[name]; ok {
+		return b
+	}
+	return nil
+}
+
 //Get instance by name
-func (ioc *Ioc) InsByName(name string) (interface{}) {
+func (ioc *Ioc) InsByName(name string) interface{} {
 	ioc.mutex.Lock()
 	defer ioc.mutex.Unlock()
 	return ioc.instanceByName(name)
 }
 
 //Get instance by Type
-func (ioc *Ioc) InsByType(t reflect.Type) (interface{}) {
+func (ioc *Ioc) InsByType(t reflect.Type) interface{} {
 	ioc.mutex.Lock()
 	defer ioc.mutex.Unlock()
 	return ioc.instanceByType(t)
 }
 
-func (ioc *Ioc) instanceByName(name string) (interface{}) {
+func (ioc *Ioc) instanceByName(name string) interface{} {
 	var(
 		instance interface{}
 		exist bool
@@ -130,7 +139,7 @@ func (ioc *Ioc) instanceByName(name string) (interface{}) {
 	return instance
 }
 
-func (ioc *Ioc) instanceByType(t reflect.Type) (interface{}) {
+func (ioc *Ioc) instanceByType(t reflect.Type) interface{} {
 	var(
 		instance interface{}
 		exist bool
@@ -142,7 +151,7 @@ func (ioc *Ioc) instanceByType(t reflect.Type) (interface{}) {
 }
 
 //Create new instance
-func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
+func (ioc *Ioc) buildInstance(t reflect.Type) interface{} {
 	if t == nil {
 		return nil
 	}
@@ -150,12 +159,12 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 	scope := SINGLETON
 	
 	if bean, ok := ioc.beansT[t]; ok {
-		t = bean.getConcreteType()
+		t = bean.GetConcreteType()
 		scope = bean.Scope
 	}
 	ins := reflect.New(t)
 
-	setField(ins, CTX_KEY, ctx)
+	setField(ins, CTX_KEY, ioc.ctx)
 
 	//Execute construct method of instance
 	cm := ins.MethodByName(CONSTRUCT_FUNC)
@@ -186,7 +195,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 			break
 		case reflect.String:
 			if tag := t.Field(index).Tag.Get("value"); !strings.EqualFold(tag, "") {
-				if v := config.GetString(tag); !strings.EqualFold(v, "") {
+				if v := system.Conf.GetString(tag); !strings.EqualFold(v, "") {
 					f.Set(reflect.ValueOf(v))
 				}
 			}
@@ -217,7 +226,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) (interface{}) {
 //Get type of bean
 func (ioc *Ioc) getType(name string) reflect.Type{
 	if t, ok := ioc.beansN[name]; ok {
-		return t.getConcreteType()
+		return t.GetConcreteType()
 	}
 	return nil
 }

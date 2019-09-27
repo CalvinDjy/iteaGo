@@ -1,4 +1,4 @@
-package itea
+package thrift
 
 import "github.com/apache/thrift/lib/go/thrift"
 

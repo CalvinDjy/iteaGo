@@ -1,9 +1,10 @@
-package itea
+package thrift
 
 import (
-	"github.com/CalvinDjy/iteaGo/ilog"
 	"context"
 	"fmt"
+	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/ioc/iface"
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -14,7 +15,7 @@ type ThriftServer struct {
 	Multiplexed		bool
 	Processor 		[]interface{}
 	Ctx             context.Context
-	Ioc 			*Ioc
+	Ioc 			iface.IIoc
 	ser 			*thrift.TSimpleServer
 }
 
@@ -36,7 +37,7 @@ func (ts *ThriftServer) Execute() {
 	
 	go ts.stop()
 
-	ilog.Info("=== Thrift server [", ts.Name, "] start [", addr, "] ===")
+	ilog.Info("=== 【Thrift】Server [", ts.Name, "] start [", addr, "] ===")
 	if err = ts.ser.Serve(); err != nil {
 		ilog.Error(err)
 		return
@@ -50,7 +51,7 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		for _, v := range ts.Processor {
 			if p, ok := ts.Ioc.InsByName(v.(string)).(IProcessor); ok {
 				processor.RegisterProcessor(p.Name(), p.Processor())
-				ilog.Info("--- Register multiplexed thrift processor [", p.Name(), "] ---")
+				ilog.Info("... 【Thrift】Register processor [", p.Name(), "] multiplexed")
 			}
 		}
 		return processor
@@ -58,7 +59,7 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		if ts.Processor != nil && len(ts.Processor) > 0 {
 			if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
 				processor := p.Processor()
-				ilog.Info("--- Register thrift processor [", p.Name(), "] ---")
+				ilog.Info("... 【Thrift】Register processor [", p.Name(), "]")
 				return processor
 			} 
 		}

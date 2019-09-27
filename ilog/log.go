@@ -2,12 +2,12 @@ package ilog
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
-	"fmt"
 )
 
 var (

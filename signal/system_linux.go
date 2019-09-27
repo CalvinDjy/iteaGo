@@ -1,6 +1,6 @@
 // +build !windows
 
-package itea
+package signal
 
 import (
 	"github.com/CalvinDjy/iteaGo/ilog"
@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 )
 
-func logProcessInfo() {
+func LogProcessInfo() {
 	pid := strconv.Itoa(os.Getpid())
 	ilog.Info("linux pid : ", pid)
 	file, err := os.OpenFile("pid", os.O_CREATE|os.O_WRONLY,0)
@@ -31,11 +31,11 @@ func getPid() string {
 	return string(r)
 }
 
-func removePid() {
+func RemovePid() {
 	os.Remove("pid")
 }
 
-func stopProcess() {
+func StopProcess() {
 	pid := getPid()
 	if strings.EqualFold(pid, "") {
 		return
@@ -56,8 +56,7 @@ func stopProcess() {
 	}
 }
 
-func processSignal() {
-	sigs = make(chan os.Signal)
+func ProcessSignal(sigs chan os.Signal, s chan bool) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL,syscall.SIGUSR1, syscall.SIGUSR2, os.Interrupt)
 	for{
 		msg := <-sigs

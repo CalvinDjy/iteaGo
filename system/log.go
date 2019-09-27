@@ -1,4 +1,4 @@
-package itea
+package system
 
 import (
 	"github.com/CalvinDjy/iteaGo/ilog"
@@ -16,7 +16,7 @@ type Log struct {
 
 func InitLog() {
 	logtype, logfile, rotate := "", "", false
-	if c := config.GetStruct(fmt.Sprintf("%s.%s", config.FileName, LOG_KEY), Log{}); c != nil {
+	if c := Conf.GetStruct(fmt.Sprintf("%s.%s", Conf.FileName, LOG_KEY), Log{}); c != nil {
 		logConf := c.(*Log)
 		if !strings.EqualFold(logConf.Type, "") {
 			logtype = logConf.Type

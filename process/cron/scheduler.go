@@ -1,10 +1,11 @@
-package itea
+package cron
 
 import (
 	"context"
 	"fmt"
-	"github.com/robfig/cron"
 	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/ioc/iface"
+	"github.com/robfig/cron"
 	"reflect"
 )
 
@@ -16,7 +17,7 @@ const (
 type Scheduler struct {
 	Name			string
 	Ctx             context.Context
-	Ioc 			*Ioc
+	Ioc 			iface.IIoc
 	Processor 		[]interface{}
 	cron			*cron.Cron
 }
@@ -62,7 +63,7 @@ func (s *Scheduler) Execute() {
 	
 	s.cron.Start()
 
-	ilog.Info("=== Scheduler start ===")
+	ilog.Info("=== 【Scheduler】 Start ===")
 }
 
 //Scheduler stop

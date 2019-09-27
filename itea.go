@@ -3,50 +3,44 @@ package itea
 import (
 	"context"
 	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/ioc"
+	"github.com/CalvinDjy/iteaGo/ioc/bean"
+	"github.com/CalvinDjy/iteaGo/system"
+	"github.com/CalvinDjy/iteaGo/process"
+	"github.com/CalvinDjy/iteaGo/signal"
+	"github.com/CalvinDjy/iteaGo/constant"
 	"os"
 	"sync"
 )
-
-const ITEAGO_VERSION = "v0.4.5"
 
 var (
 	sigs 			chan os.Signal
 	s				chan bool
 	ctx				context.Context
-	config			*Config
+	config			*system.Config
 )
-
-type Process struct {
-	Name 			string
-	Class 			string
-	ExecuteMethod 	string
-	Params 			map[string]interface{}
-}
 
 type Itea struct {
 	process			[]interface{}
-	ioc 			*Ioc
+	ioc 			*ioc.Ioc
 }
 
 //Create Itea
-func New(appConfig string) *Itea {
-	config = InitConf(appConfig)
+func New(appConfig string, debug bool) *Itea {
+	system.InitConf(appConfig)
 	ctx = context.Background()
-	InitLog()
-	if process := config.GetStructArray("application.process", Process{}); process != nil {
+	if debug {
+		ctx = context.WithValue(ctx, constant.DEBUG, true)
+	}
+	system.InitLog()
+	if process := system.Conf.GetStructArray("application.process", process.Process{}); process != nil {
 		return &Itea{
 			process: process,
-			ioc: NewIoc(),
+			ioc: ioc.NewIoc(ctx),
 		}
 	} else {
 		panic("Can not find config of process")
 	}
-}
-
-//Debug
-func (i *Itea) Debug() *Itea {
-	ctx = context.WithValue(ctx, DEBUG, true)
-	return i
 }
 
 //Register simple beans
@@ -63,11 +57,11 @@ func (i *Itea) Register(beans ...[]interface{}) *Itea {
 }
 
 //Register beans
-func (i *Itea) RegisterBean(beans ...[]*Bean) *Itea {
+func (i *Itea) RegisterBean(beans ...[]*bean.Bean) *Itea {
 	if i == nil {
 		return nil
 	}
-	var beanList []*Bean
+	var beanList []*bean.Bean
 	for _, bean := range beans{
 		beanList = append(beanList, bean...)
 	}
@@ -78,12 +72,12 @@ func (i *Itea) RegisterBean(beans ...[]*Bean) *Itea {
 //Run Itea
 func (i *Itea) Run() {
 	switch true {
-	case Stop:
+	case system.Stop:
 		i.stop()
 		break
-	case Help:
+	case system.Help:
 		break
-	case Start:
+	case system.Start:
 		i.start()
 		break
 	}
@@ -91,12 +85,13 @@ func (i *Itea) Run() {
 
 //Start Itea
 func (i *Itea) start() {
-	go logProcessInfo()
+	go signal.LogProcessInfo()
 
 	s = make(chan bool)
 	defer close(s)
 
-	go processSignal()
+	sigs = make(chan os.Signal)
+	go signal.ProcessSignal(sigs, s)
 
 	ctx, stop := context.WithCancel(ctx)
 
@@ -109,7 +104,7 @@ func (i *Itea) start() {
 
 	var wg sync.WaitGroup
 	for _, p := range i.process {
-		var process = p.(*Process)
+		var process = p.(*process.Process)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -122,7 +117,7 @@ func (i *Itea) start() {
 	
 	if ilog.Done() {
 		close(sigs)
-		removePid()
+		signal.RemovePid()
 		os.Exit(0)
 	}
 
@@ -130,19 +125,19 @@ func (i *Itea) start() {
 
 //Stop itea
 func (i *Itea) stop() {
-	stopProcess()
+	signal.StopProcess()
 }
 
-type IteaTest struct {
-	Ioc 	*Ioc
-}
-
-//Create IteaTest
-func NewIteaTest(appConfig string) *IteaTest {
-	config = InitConf(appConfig)
-	ctx = context.WithValue(context.Background(), DEBUG, true)
-	InitLog()
-	return &IteaTest{
-		Ioc: NewIoc(),
-	}
-}
+//type IteaTest struct {
+////	Ioc 	*ioc.Ioc
+////}
+////
+//////Create IteaTest
+////func NewIteaTest(appConfig string) *IteaTest {
+////	config = system.InitConf(appConfig)
+////	ctx = context.WithValue(context.Background(), DEBUG, true)
+////	system.InitLog()
+////	return &IteaTest{
+////		Ioc: ioc.NewIoc(),
+////	}
+////}

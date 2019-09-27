@@ -1,10 +1,11 @@
-package itea
+package ihttp
 
 import (
+	"github.com/CalvinDjy/iteaGo/constant"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"strings"
 	"os"
+	"strings"
 )
 
 type routeConf struct {
@@ -43,7 +44,7 @@ func (r *Route) InitRoute(routeConfig string, env string) {
 	if err != nil {
 		panic(err)
 	}
-	data, err := ioutil.ReadFile(projectPath + strings.Replace(routeConfig, SEARCH_ENV, env, -1))
+	data, err := ioutil.ReadFile(projectPath + strings.Replace(routeConfig, constant.SEARCH_ENV, env, -1))
 	if err != nil {
 		panic("Route config not find")
 	}

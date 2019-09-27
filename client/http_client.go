@@ -1,9 +1,10 @@
-package itea
+package client
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"github.com/CalvinDjy/iteaGo/constant"
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"io"
 	"io/ioutil"
@@ -27,7 +28,7 @@ type HttpClient struct {
 }
 
 func (c *HttpClient) Construct() {
-	c.debug = c.Ctx.Value(DEBUG).(bool)
+	c.debug = c.Ctx.Value(constant.DEBUG).(bool)
 }
 
 func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int, skipHttps bool) (result []byte, err error) {

@@ -1,9 +1,10 @@
-package itea
+package system
 
 import (
 	"flag"
 	"fmt"
 	"github.com/goinggo/mapstructure"
+	"github.com/CalvinDjy/iteaGo/constant"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -13,39 +14,33 @@ import (
 	"sync"
 )
 
-const (
-	SEARCH_ENV  	= "{env}"
-	DEFAULT_ENV		= "dev"
-	IMPORT_KEY		= "import"
-	DATABASE_KEY	= "database"
-)
-
 var (
 	Help		bool
 	Start 		bool
 	Stop 		bool
 	Env 		string	//Environment
 	projpath 	string	//Application proj base path
+	Conf		*Config
 )
 
 func init ()  {
 	flag.BoolVar(&Help, "h", false, "Get help")
 	flag.BoolVar(&Start, "start", true, "Start application")
 	flag.BoolVar(&Stop, "stop", false, "Stop application")
-	flag.StringVar(&Env, "e", DEFAULT_ENV, "Set application environment")
+	flag.StringVar(&Env, "e", constant.DEFAULT_ENV, "Set application environment")
 	flag.Parse()
 	if Help {
 		fmt.Fprintf(os.Stderr, `iteaGo version: iteaGo/%s
 Usage: main [-start|-stop] [-e env]
 Options:
-`, ITEAGO_VERSION)
+`, constant.ITEAGO_VERSION)
 		flag.PrintDefaults()
 	}
 }
 
 //Get file path
 func filePath(f string) string {
-	return projpath + strings.Replace(f, SEARCH_ENV, Env, -1)
+	return projpath + strings.Replace(f, constant.SEARCH_ENV, Env, -1)
 }
 
 //Get file name
@@ -81,7 +76,7 @@ type Config struct {
 	config			map[interface{}]interface{}
 }
 
-func InitConf(file string) *Config {
+func InitConf(file string) {
 	var err error
 	projpath, err = os.Getwd()
 	if err != nil {
@@ -98,34 +93,32 @@ func InitConf(file string) *Config {
 	}
 
 	FileName := fileName(file)
-	c := &Config{
+	Conf = &Config{
 		FileName: FileName,
 		config: make(map[interface{}]interface{}),
 	}
-	c.config[FileName] = application
+	Conf.config[FileName] = application
 	
 	var wg sync.WaitGroup
 	
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.importConfig()
+		Conf.importConfig()
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		c.dbConfig()
+		Conf.dbConfig()
 	}()
 	
 	wg.Wait()
-
-	return c
 }
 
 //Extract database config
 func (c *Config) dbConfig() {
-	if f := c.GetString(fmt.Sprintf("%s.%s", c.FileName, DATABASE_KEY));!strings.EqualFold(f, "") {
+	if f := c.GetString(fmt.Sprintf("%s.%s", c.FileName, constant.DATABASE_KEY));!strings.EqualFold(f, "") {
 		dat, err := ioutil.ReadFile(filePath(f))
 		if err != nil {
 			panic("database config not find")
@@ -135,13 +128,13 @@ func (c *Config) dbConfig() {
 		if err != nil {
 			panic(err)
 		}
-		c.config[DATABASE_KEY] = databases
+		c.config[constant.DATABASE_KEY] = databases
 	}
 }
 
 //Extract import config
 func (c *Config) importConfig() {
-	imp := c.GetArray(fmt.Sprintf("%s.%s", c.FileName, IMPORT_KEY))
+	imp := c.GetArray(fmt.Sprintf("%s.%s", c.FileName, constant.IMPORT_KEY))
 	if len(imp) <= 0 {
 		return
 	}
@@ -256,21 +249,21 @@ func (c *Config) GetStructMap(key string, s interface{}) map[string]interface{} 
 }
 
 func String(key string) string {
-	return config.GetString(key)
+	return Conf.GetString(key)
 }
 
 func Array(key string) []interface{} {
-	return config.GetArray(key)
+	return Conf.GetArray(key)
 }
 
 func Struct(key string, s interface{}) interface{} {
-	return config.GetStruct(key, s)
+	return Conf.GetStruct(key, s)
 }
 
 func StructArray(key string, s interface{}) []interface{} {
-	return config.GetStructArray(key, s)
+	return Conf.GetStructArray(key, s)
 }
 
 func StructMap(key string, s interface{}) map[string]interface{} {
-	return config.GetStructMap(key, s)
+	return Conf.GetStructMap(key, s)
 }
