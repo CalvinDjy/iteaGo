@@ -15,9 +15,9 @@ const (
 )
 
 type Scheduler struct {
-	Name			string
 	Ctx             context.Context
 	Ioc 			iface.IIoc
+	Name			string
 	Processor 		[]interface{}
 	cron			*cron.Cron
 }

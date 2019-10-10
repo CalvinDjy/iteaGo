@@ -30,14 +30,14 @@ func (r *Response) SetHeader(key string, value string) {
 }
 
 type HttpServer struct {
+	Ctx             context.Context
+	Ioc 			iface.IIoc
 	Name			string
 	Ip 				string
 	Port 			string
 	ReadTimeout 	int
 	WriteTimeout 	int
 	Route			string
-	Ctx             context.Context
-	Ioc 			iface.IIoc
 	Router			Route
 	ser 			*http.Server
 	wg 				sync.WaitGroup

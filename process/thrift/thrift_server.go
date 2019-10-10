@@ -9,13 +9,13 @@ import (
 )
 
 type ThriftServer struct {
+	Ctx             context.Context
+	Ioc 			iface.IIoc
 	Name   			string
 	Ip				string
 	Port 			string
 	Multiplexed		bool
 	Processor 		[]interface{}
-	Ctx             context.Context
-	Ioc 			iface.IIoc
 	ser 			*thrift.TSimpleServer
 }
 

@@ -234,7 +234,7 @@ func (ioc *Ioc) getType(name string) reflect.Type{
 //Set field of instance
 func setField(i reflect.Value, n string, v interface{}) {
 	field := i.Elem().FieldByName(n)
-	if field.CanSet() {
+	if field.CanSet() && v != nil {
 		field.Set(reflect.ValueOf(v))
 	}
 }

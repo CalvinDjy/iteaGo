@@ -4,6 +4,7 @@ import (
 	"github.com/CalvinDjy/iteaGo/ioc/bean"
 	"github.com/CalvinDjy/iteaGo/process/cron"
 	"github.com/CalvinDjy/iteaGo/process/ihttp"
+	"github.com/CalvinDjy/iteaGo/process/kafka"
 	"github.com/CalvinDjy/iteaGo/process/thrift"
 	"reflect"
 	"strings"
@@ -25,6 +26,7 @@ func (r *Register) process() []interface{} {
 		ihttp.HttpServer{},
 		thrift.ThriftServer{},
 		cron.Scheduler{},
+		kafka.KafkaConsumer{},
 	}
 }
 
