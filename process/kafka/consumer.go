@@ -144,17 +144,12 @@ func (kc *KafkaConsumer) deal(msg *sarama.ConsumerMessage) {
 
 	msgKey := string(msg.Key)
 
-	ilog.Info("msgKey : [", msgKey, "]")
-	ilog.Info("handler : ", kc.handler)
-	
 	if l, ok := kc.handler[msgKey]; ok {
-		ilog.Info("1-----", l)
 		handlerList = append(handlerList, l...)
 	}
 
 	if msgKey != "" {
 		if l, ok := kc.handler[""]; ok {
-			ilog.Info("2-----", l)
 			handlerList = append(handlerList, l...)
 		}
 	}
