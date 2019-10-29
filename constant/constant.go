@@ -1,7 +1,7 @@
 package constant
 
 const (
-	ITEAGO_VERSION 	= "v1.1.2"
+	ITEAGO_VERSION 	= "v1.1.3"
 	DEBUG 			= "debug"
 
 	SEARCH_ENV  	= "{env}"
