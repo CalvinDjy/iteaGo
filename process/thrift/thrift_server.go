@@ -37,7 +37,7 @@ func (ts *ThriftServer) Execute() {
 	
 	go ts.stop()
 
-	ilog.Info("=== 【Thrift】Server [", ts.Name, "] start [", addr, "] ===")
+	ilog.Info(fmt.Sprintf("=== 【Thrift】Server [%s] start [%s] ===", ts.Name, addr))
 	if err = ts.ser.Serve(); err != nil {
 		ilog.Error(err)
 		return
@@ -51,7 +51,7 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		for _, v := range ts.Processor {
 			if p, ok := ts.Ioc.InsByName(v.(string)).(IProcessor); ok {
 				processor.RegisterProcessor(p.Name(), p.Processor())
-				ilog.Info("... 【Thrift】Register processor [", p.Name(), "] multiplexed")
+				ilog.Info(fmt.Sprintf("... 【Thrift】Register processor [%s] multiplexed", p.Name()))
 			}
 		}
 		return processor
@@ -59,7 +59,7 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		if ts.Processor != nil && len(ts.Processor) > 0 {
 			if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
 				processor := p.Processor()
-				ilog.Info("... 【Thrift】Register processor [", p.Name(), "]")
+				ilog.Info(fmt.Sprintf("... 【Thrift】Register processor [%s]", p.Name()))
 				return processor
 			} 
 		}

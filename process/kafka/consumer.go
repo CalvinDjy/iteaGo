@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"github.com/CalvinDjy/iteaGo/constant"
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"github.com/CalvinDjy/iteaGo/ioc/iface"
 	"github.com/Shopify/sarama"
@@ -25,10 +26,15 @@ type KafkaConsumer struct {
 	Processor		[]interface{}
 	consumer		*cluster.Consumer
 	handler			map[string][]IHandler
+	debug 			bool
 }
 
 func (kc *KafkaConsumer) Execute() {
-	
+
+	if d, ok := kc.Ctx.Value(constant.DEBUG).(bool); ok {
+		kc.debug = d
+	}
+
 	// init (custom) config, enable errors and notifications
 	config := cluster.NewConfig()
 	config.Group.Mode = cluster.ConsumerModePartitions
@@ -47,7 +53,7 @@ func (kc *KafkaConsumer) Execute() {
 	topics := []string{kc.Topic}
 	
 	if kc.Group == "" {
-		kc.Group = kc.Topic + "_group_1"
+		kc.Group = fmt.Sprintf("%s%s%d", kc.Topic, "_group_", 1)
 	}
 	
 	var err error
@@ -71,6 +77,7 @@ func (kc *KafkaConsumer) Execute() {
 	}()
 
 	kc.initHandler()
+	ilog.Info(fmt.Sprintf("=== 【Kafka】Consumer [%s] start [Topic : %s, Group : %s] ===", kc.Name, kc.Topic, kc.Group))
 	kc.start()
 }
 
@@ -118,6 +125,9 @@ func (kc *KafkaConsumer) start () {
 			// start a separate goroutine to consume messages
 			go func(pc cluster.PartitionConsumer) {
 				for msg := range pc.Messages() {
+					if kc.debug {
+						ilog.Info(fmt.Sprintf("【Kafka Receive】 partition: %d, key: %s, topic: %s, value: %s", msg.Partition, msg.Key, msg.Topic, msg.Value))
+					}
 					kc.deal(msg)
 				}
 			}(part)

@@ -171,6 +171,18 @@ func (c *Config) value(key string) interface{} {
 }
 
 //Get string value
+func (c *Config) GetInt(key string) int {
+	v := c.value(key)
+	if v == nil {
+		return 0
+	}
+	if s, ok := v.(int); ok {
+		return s
+	}
+	return 0
+}
+
+//Get string value
 func (c *Config) GetString(key string) string {
 	v := c.value(key)
 	if v == nil {
@@ -246,6 +258,10 @@ func (c *Config) GetStructMap(key string, s interface{}) map[string]interface{} 
 		return m
 	}
 	return nil
+}
+
+func Int(key string) int {
+	return Conf.GetInt(key)
 }
 
 func String(key string) string {

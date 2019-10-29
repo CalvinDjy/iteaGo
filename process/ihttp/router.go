@@ -28,7 +28,7 @@ type actionConf struct {
 
 type Route struct {
 	Groups		map[string]groupConf
-	Actions 	[]*action
+	Actions 	map[string][]*action
 }
 
 type action struct {
@@ -60,12 +60,12 @@ func (r *Route) InitRoute(routeConfig string, env string) {
 	r.Actions = extract(routeConf.ActionConf, r.Groups)
 }
 
-func extract(actionConf map[string]actionConf, groups map[string]groupConf) []*action{
+func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[string][]*action{
 	l := len(actionConf)
 	ch := make(chan *action, l)
 	defer close(ch)
 	
-	var actions []*action
+	actions := map[string][]*action{}
 	
 	for uri, conf := range actionConf {
 		u, c := uri, conf
@@ -120,7 +120,10 @@ func extract(actionConf map[string]actionConf, groups map[string]groupConf) []*a
 		if strings.EqualFold(a.Uri, "") {
 			continue
 		}
-		actions = append(actions, a)
+		if _, ok := actions[a.Uri]; !ok {
+			actions[a.Uri] = []*action{}
+		}
+		actions[a.Uri] = append(actions[a.Uri], a)
 	}
 	return actions
 }

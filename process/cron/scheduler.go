@@ -58,12 +58,12 @@ func (s *Scheduler) Execute() {
 			method.Call([]reflect.Value{})
 		})
 	}
-
-	go s.stop()
 	
 	s.cron.Start()
 
 	ilog.Info("=== 【Scheduler】 Start ===")
+
+	s.stop()
 }
 
 //Scheduler stop

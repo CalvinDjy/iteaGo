@@ -8,9 +8,10 @@ import (
 
 type KafkaSyncProducer struct {
 	client sarama.SyncProducer
+	debug bool
 }
 
-func NewProducer(broker []string) *KafkaSyncProducer {
+func NewProducer(broker []string, debug bool) *KafkaSyncProducer {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
@@ -24,6 +25,7 @@ func NewProducer(broker []string) *KafkaSyncProducer {
 
 	return &KafkaSyncProducer{
 		client: client,
+		debug: debug,
 	}
 }
 
@@ -35,6 +37,8 @@ func (sp *KafkaSyncProducer) Send(topic string, value string) error {
 	if err != nil {
 		return err
 	}
-	ilog.Info(fmt.Sprintf("kafka send pid:%v offset:%v", pid, offset))
+	if sp.debug {
+		ilog.Info(fmt.Sprintf("【Kafka Send】 pid: %v, offset: %v", pid, offset))
+	}
 	return nil
 }

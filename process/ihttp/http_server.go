@@ -10,8 +10,8 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"strings"
 	"sync"
+	"strings"
 	"time"
 )
 
@@ -27,6 +27,12 @@ type Response struct {
 
 func (r *Response) SetHeader(key string, value string) {
 	r.Header[key] = value
+}
+
+type routeAction struct {
+	exec reflect.Value
+	method string
+	interceptor []IInterceptor
 }
 
 type HttpServer struct {
@@ -58,17 +64,27 @@ func (hs *HttpServer) Execute() {
 	//Create route manager
 	mux := http.NewServeMux()
 
-	for _, a := range hs.Router.Actions {
+	for p, as := range hs.Router.Actions {
 		hs.wg.Add(1)
-		go func(action *action) {
+		go func(path string, actions []*action) {
 			defer hs.wg.Done()
-			method := hs.extractMethod(action)
-
-			//Get action interceptor list
-			interceptor := ActionInterceptor(action.Middleware, hs.Ioc)
 			
-			mux.HandleFunc(action.Uri, hs.handler(action, method, interceptor))
-		}(a)
+			var routeActions []routeAction
+			for _, a := range actions {
+				exec := hs.extractExec(a)
+
+				//Get action interceptor list
+				interceptor := ActionInterceptor(a.Middleware, hs.Ioc)
+				
+				routeActions = append(routeActions, routeAction{
+					exec: exec,
+					method: a.Method,
+					interceptor: interceptor,
+				})
+			}
+			
+			mux.HandleFunc(path, hs.handler(routeActions))
+		}(p, as)
 	}
 
 	hs.wg.Wait()
@@ -79,7 +95,7 @@ func (hs *HttpServer) Execute() {
 }
 
 //Http handler
-func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor []IInterceptor) func(w http.ResponseWriter, r *http.Request){
+func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWriter, r *http.Request){
 	return func(w http.ResponseWriter, r *http.Request){
 
 		hs.wg.Add(1)
@@ -90,13 +106,21 @@ func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor 
 		rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
 
 		defer hs.output(w, response)
-
-		if !strings.EqualFold(r.Method, action.Method) {
+		var exec reflect.Value
+		var interceptor []IInterceptor
+		for _, ra := range routeActions {
+			if strings.EqualFold(ra.method, r.Method) {
+				exec, interceptor = ra.exec, ra.interceptor
+				break
+			}
+		}
+		
+		if !exec.IsValid() {
 			response.Data = "Method not allowed"
 			return
 		}
 
-		n := method.Type().NumIn()
+		n := exec.Type().NumIn()
 		if n > 2 {
 			panic("Action params must be (*http.Request) or (*http.Request, http.ResponseWriter)")
 		}
@@ -107,7 +131,7 @@ func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor 
 		}
 
 		f := func(request *http.Request, response *Response) error {
-			res := method.Call(p)
+			res := exec.Call(p)
 			switch len(res) {
 			case 0:
 				return nil
@@ -138,15 +162,15 @@ func (hs *HttpServer) handler(action *action, method reflect.Value, interceptor 
 	}
 }
 
-func (hs *HttpServer) extractMethod(a *action) reflect.Value{
+func (hs *HttpServer) extractExec(a *action) reflect.Value{
 	c := reflect.ValueOf(hs.Ioc.InsByName(a.Controller))
 	if !c.IsValid() {
-		panic(fmt.Sprint("Controller [", a.Controller, "] need register"))
+		panic(fmt.Sprintf("Controller [%s] need register", a.Controller))
 	}
 	m := c.MethodByName(a.Action)
 
 	if !m.IsValid() {
-		panic(fmt.Sprint("Can not find method [", a.Action, "] in [", a.Controller, "]"))
+		panic(fmt.Sprintf("Can not find method [%s] in [%s]", a.Action, a.Controller))
 	}
 
 	return m
@@ -164,9 +188,9 @@ func (hs *HttpServer) start() {
 
 	go hs.stop()
 
-	ilog.Info("=== 【Http】Server [", hs.Name, "] start [", hs.ser.Addr, "] ===")
+	ilog.Info(fmt.Sprintf("=== 【Http】Server [%s] start [%s] ===", hs.Name,  hs.ser.Addr))
 	if err := hs.ser.ListenAndServe(); err != nil {
-		ilog.Info("http server [", hs.Name, "] stop [", err, "]")
+		ilog.Info(fmt.Sprintf("http server [%s] stop [%s]", hs.Name, err))
 	}
 }
 

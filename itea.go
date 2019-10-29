@@ -39,7 +39,7 @@ func New(appConfig string, debug bool) *Itea {
 			ioc: ioc.NewIoc(ctx),
 		}
 	} else {
-		panic("Can not find config of process")
+		panic("Can not find config of process or process is nil")
 	}
 }
 
