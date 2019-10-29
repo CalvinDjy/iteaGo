@@ -152,12 +152,12 @@ func (kc *KafkaConsumer) deal(msg *sarama.ConsumerMessage) {
 		handlerList = append(handlerList, l...)
 	}
 
-	//if msgKey != "" {
+	if msgKey != "" {
 		if l, ok := kc.handler[""]; ok {
 			ilog.Info("2-----", l)
 			handlerList = append(handlerList, l...)
 		}
-	//}
+	}
 
 	if len(handlerList) == 0 {
 		ilog.Error(fmt.Sprintf("message key [%s] has not matched handler", msg.Key))
