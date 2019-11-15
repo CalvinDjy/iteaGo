@@ -128,16 +128,24 @@ func (i *Itea) stop() {
 	signal.StopProcess()
 }
 
-//type IteaTest struct {
-////	Ioc 	*ioc.Ioc
-////}
-////
-//////Create IteaTest
-////func NewIteaTest(appConfig string) *IteaTest {
-////	config = system.InitConf(appConfig)
-////	ctx = context.WithValue(context.Background(), DEBUG, true)
-////	system.InitLog()
-////	return &IteaTest{
-////		Ioc: ioc.NewIoc(),
-////	}
-////}
+type IteaTest struct {
+	Ioc 	*ioc.Ioc
+}
+
+//Create IteaTest
+func NewIteaTest(appConfig string, debug bool) *IteaTest {
+	system.InitConf(appConfig)
+	ctx = context.Background()
+	if debug {
+		ctx = context.WithValue(ctx, constant.DEBUG, true)
+	}
+	system.InitLog()
+	return &IteaTest{
+		Ioc: ioc.NewIoc(ctx),
+	}
+}
+
+//Create Instance
+func (itea *IteaTest) Instance(i interface{}) interface{} {
+	return itea.Ioc.InsByClass(i)
+}

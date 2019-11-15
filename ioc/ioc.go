@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"fmt"
 )
 
 const (
@@ -112,6 +113,13 @@ func (ioc *Ioc) BeansByName(name string) *bean.Bean {
 		return b
 	}
 	return nil
+}
+
+//Get instance by name
+func (ioc *Ioc) InsByClass(i interface{}) interface{} {
+	ioc.mutex.Lock()
+	defer ioc.mutex.Unlock()
+	return ioc.instanceByType(reflect.TypeOf(i))
 }
 
 //Get instance by name
@@ -240,6 +248,11 @@ func (ioc *Ioc) getType(name string) reflect.Type{
 func setField(i reflect.Value, n string, v interface{}) {
 	field := i.Elem().FieldByName(n)
 	if field.CanSet() && v != nil {
-		field.Set(reflect.ValueOf(v))
+		ft, vt := field.Type(), reflect.TypeOf(v)
+		if ft == vt || (field.Kind().String() == "interface" && vt.Implements(ft)) {
+			field.Set(reflect.ValueOf(v))
+		} else {
+			panic(fmt.Sprintf("can not inject %s(%s) with %s", n, ft.String(), vt.String()))
+		}
 	}
 }

@@ -72,7 +72,7 @@ func (p *Redis) initOpt(conf *RedisConf) *redis.Options {
 	}
 
 	opt := &redis.Options{
-		Addr:     			fmt.Sprintf("%s:%s", host, port),
+		Addr:     			fmt.Sprintf("%s:%d", host, port),
 		Password: 			REDIS_PASSWORD,
 		DB:       			REDIS_DATABASE,
 		PoolSize: 			REDIS_POOL_MAX_ACTIVE,

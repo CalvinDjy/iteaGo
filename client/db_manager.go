@@ -21,7 +21,7 @@ const (
 type DatabaseConf struct {
 	Driver 			string
 	Ip 				string
-	Port 			string
+	Port 			int
 	Database 		string
 	Username 		string
 	Password 		string
@@ -96,6 +96,6 @@ func (dm *DbManager) createConnection(name string) (db *sql.DB) {
 }
 
 func (dm *DbManager) dataSource(dbconfig *DatabaseConf) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s",
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s",
 		dbconfig.Username, dbconfig.Password, dbconfig.Ip, dbconfig.Port, dbconfig.Database, dbconfig.Charset)
 }

@@ -13,7 +13,7 @@ type ThriftServer struct {
 	Ioc 			iface.IIoc
 	Name   			string
 	Ip				string
-	Port 			string
+	Port 			int
 	Multiplexed		bool
 	Processor 		[]interface{}
 	ser 			*thrift.TSimpleServer
@@ -22,7 +22,7 @@ type ThriftServer struct {
 //Thrift server start
 func (ts *ThriftServer) Execute() {
 
-	addr := fmt.Sprintf("%s:%s", ts.Ip, ts.Port)
+	addr := fmt.Sprintf("%s:%d", ts.Ip, ts.Port)
 
 	serverTransport, err := thrift.NewTServerSocket(addr)
 	if err != nil {

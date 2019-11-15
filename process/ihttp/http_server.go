@@ -40,7 +40,7 @@ type HttpServer struct {
 	Ioc 			iface.IIoc
 	Name			string
 	Ip 				string
-	Port 			string
+	Port 			int
 	ReadTimeout 	int
 	WriteTimeout 	int
 	Route			string
@@ -125,9 +125,11 @@ func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWr
 			panic("Action params must be (*http.Request) or (*http.Request, http.ResponseWriter)")
 		}
 
-		p := []reflect.Value{rr}
-		if n == 2 {
-			p = append(p, rw)
+		p := []reflect.Value{}
+		if n == 1 {
+			p = append(p, rr)
+		} else if n == 2 {
+			p = append(p, rr, rw)
 		}
 
 		f := func(request *http.Request, response *Response) error {
@@ -178,7 +180,7 @@ func (hs *HttpServer) extractExec(a *action) reflect.Value{
 
 //Http server start
 func (hs *HttpServer) start() {
-	hs.ser.Addr = fmt.Sprintf("%s:%s", hs.Ip, hs.Port)
+	hs.ser.Addr = fmt.Sprintf("%s:%d", hs.Ip, hs.Port)
 	if hs.ReadTimeout != 0 {
 		hs.ser.ReadTimeout = time.Duration(hs.ReadTimeout) * time.Second
 	}
