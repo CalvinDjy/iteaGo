@@ -49,7 +49,7 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 	if ts.Multiplexed {
 		processor := thrift.NewTMultiplexedProcessor()
 		for _, v := range ts.Processor {
-			if p, ok := ts.Ioc.InsByName(v.(string)).(IProcessor); ok {
+			if p := ts.check(v.(string)); p != nil {
 				processor.RegisterProcessor(p.Name(), p.Processor())
 				ilog.Info(fmt.Sprintf("... 【Thrift】Register processor [%s] multiplexed", p.Name()))
 			}
@@ -57,15 +57,30 @@ func (ts *ThriftServer) processor() thrift.TProcessor {
 		return processor
 	} else {
 		if ts.Processor != nil && len(ts.Processor) > 0 {
-			if p, ok := ts.Ioc.InsByName(ts.Processor[0].(string)).(IProcessor); ok {
+			if p := ts.check(ts.Processor[0].(string)); p != nil {
 				processor := p.Processor()
 				ilog.Info(fmt.Sprintf("... 【Thrift】Register processor [%s]", p.Name()))
 				return processor
-			} 
+			}
 		}
-		ilog.Info("Thrift processor config error")
-		panic("Thrift processor config error")
+		panic("thrift processor config error")
 	}
+}
+
+func (ts *ThriftServer) check(name string) IProcessor {
+	i := ts.Ioc.InsByName(name)
+	if i == nil {
+		ilog.Error(fmt.Sprintf("processor [%s] is nil, please check out if [%s] is registed", name, name))
+		return nil
+	}
+	
+	if p, ok := i.(IProcessor); ok {
+		return p
+	} else {
+		ilog.Error(fmt.Sprintf("processor [%s] is not impliment of thrift.IProcessor", i))
+	}
+	
+	return nil
 }
 
 //Thrift server stop
@@ -73,9 +88,9 @@ func (ts *ThriftServer) stop() {
 	for {
 		select {
 		case <-	ts.Ctx.Done():
-			ilog.Info("Thrift server stop ...")
+			ilog.Info("thrift server stop ...")
 			ts.ser.Stop()
-			ilog.Info("Thrift server stop success")
+			ilog.Info("thrift server stop success")
 			return
 		}
 	}

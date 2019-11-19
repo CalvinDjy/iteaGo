@@ -29,9 +29,10 @@ func NewProducer(broker []string, debug bool) *KafkaSyncProducer {
 	}
 }
 
-func (sp *KafkaSyncProducer) Send(topic string, value string) error {
+func (sp *KafkaSyncProducer) Send(topic string, key string, value string) error {
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = topic
+	msg.Key = sarama.StringEncoder(key)
 	msg.Value = sarama.StringEncoder(value)
 	pid, offset, err := sp.client.SendMessage(msg)
 	if err != nil {

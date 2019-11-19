@@ -65,14 +65,14 @@ func (kc *KafkaConsumer) Execute() {
 	// consume errors
 	go func() {
 		for err := range kc.consumer.Errors() {
-			ilog.Error("Consumer Error: ", err.Error())
+			ilog.Error("consumer error: ", err.Error())
 		}
 	}()
 	
 	// consume notifications
 	go func() {
 		for ntf := range kc.consumer.Notifications() {
-			ilog.Info(fmt.Sprintf("Consumer Rebalanced: %+v", ntf))
+			ilog.Info(fmt.Sprintf("consumer rebalanced: %+v", ntf))
 		}
 	}()
 
@@ -97,17 +97,26 @@ func (kc *KafkaConsumer) initHandler() {
 			}
 			kc.appendHandler(k, i[HANDLER_KEY].(string))
 		}
-		
+
 	}
 }
 
 func (kc *KafkaConsumer) appendHandler(k string, i string) {
-	if h, ok := kc.Ioc.InsByName(i).(IHandler); ok {
+	h := kc.Ioc.InsByName(i)
+	if h == nil {
+		ilog.Error(fmt.Sprintf("consumer [%s] is nil, please check out if [%s] is registed", i, i))
+		return
+	}
+
+	if v, ok := h.(IHandler); ok {
 		if _, ok := kc.handler[k]; !ok {
 			kc.handler[k] = []IHandler{}
 		}
-		kc.handler[k] = append(kc.handler[k], h)
+		kc.handler[k] = append(kc.handler[k], v)
+		return
 	}
+
+	ilog.Error(fmt.Sprintf("consumer [%s] is not impliment of kafka.IHandler", i))
 }
 
 func (kc *KafkaConsumer) start () {
@@ -171,9 +180,9 @@ func (kc *KafkaConsumer) stop(stop chan bool) {
 	for {
 		select {
 		case <-	kc.Ctx.Done():
-			ilog.Info("Kafka consumer stop ...")
+			ilog.Info("kafka consumer stop ...")
 			stop <- true
-			ilog.Info("Kafka consumer stop success")
+			ilog.Info("kafka consumer stop success")
 			return
 		}
 	}

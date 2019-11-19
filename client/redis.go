@@ -14,7 +14,7 @@ import (
 const (
 	REDIS_KEY 						= "redis"
 	REDIS_HOST 						= ""
-	REDIS_PORT 						= "6379"
+	REDIS_PORT 						= 6379
 	REDIS_DATABASE 					= 0
 	REDIS_PASSWORD 					= ""
 	REDIS_POOL_MAX_IDLE 			= 10
@@ -26,7 +26,7 @@ const (
 
 type RedisConf struct {
 	Host 			string
-	Port 			string
+	Port 			int
 	Database 		int
 	Password 		string
 	MaxIdle 		int
@@ -67,7 +67,7 @@ func (p *Redis) initOpt(conf *RedisConf) *redis.Options {
 	if !strings.EqualFold(conf.Host, "") {
 		host = conf.Host
 	}
-	if !strings.EqualFold(conf.Port, "") {
+	if conf.Port == 0 {
 		port = conf.Port
 	}
 

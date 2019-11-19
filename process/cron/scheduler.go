@@ -44,13 +44,17 @@ func (s *Scheduler) Execute() {
 			continue
 		}
 
-		task := reflect.ValueOf(s.Ioc.InsByName(p[TASK_KEY].(string)))
+		name := p[TASK_KEY].(string)
+
+		task := reflect.ValueOf(s.Ioc.InsByName(name))
 		if !task.IsValid() {
-			panic(fmt.Sprint("Controller [", p[TASK_KEY].(string), "] need register"))
+			ilog.Error(fmt.Sprintf("task [%s] is nil, please check out if [%s] is registed", name, name))
+			continue
 		}
 		
 		method := task.MethodByName("Execute")
 		if !method.IsValid() {
+			ilog.Error(fmt.Sprintf("task [%s] need the method of `Execute`", name, name))
 			continue
 		}
 		
@@ -71,9 +75,9 @@ func (s *Scheduler) stop() {
 	for {
 		select {
 		case <-	s.Ctx.Done():
-			ilog.Info("Scheduler stop ...")
+			ilog.Info("scheduler stop ...")
 			s.cron.Stop()
-			ilog.Info("Scheduler stop success")
+			ilog.Info("scheduler stop success")
 			return
 		}
 	}

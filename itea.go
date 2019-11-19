@@ -33,13 +33,9 @@ func New(appConfig string, debug bool) *Itea {
 		ctx = context.WithValue(ctx, constant.DEBUG, true)
 	}
 	system.InitLog()
-	if process := system.Conf.GetStructArray("application.process", process.Process{}); process != nil {
-		return &Itea{
-			process: process,
-			ioc: ioc.NewIoc(ctx),
-		}
-	} else {
-		panic("Can not find config of process or process is nil")
+	return &Itea{
+		process: system.Conf.GetStructArray("application.process", process.Process{}),
+		ioc: ioc.NewIoc(ctx),
 	}
 }
 
@@ -85,6 +81,10 @@ func (i *Itea) Run() {
 
 //Start Itea
 func (i *Itea) start() {
+	if i.process == nil {
+		panic("Can not find config of process or process is nil")
+	}
+	
 	go signal.LogProcessInfo()
 
 	s = make(chan bool)

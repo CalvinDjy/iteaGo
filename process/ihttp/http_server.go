@@ -73,6 +73,10 @@ func (hs *HttpServer) Execute() {
 			for _, a := range actions {
 				exec := hs.extractExec(a)
 
+				if exec == reflect.ValueOf(nil) {
+					continue
+				}
+				
 				//Get action interceptor list
 				interceptor := ActionInterceptor(a.Middleware, hs.Ioc)
 				
@@ -106,8 +110,15 @@ func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWr
 		rr, rw := reflect.ValueOf(r), reflect.ValueOf(w)
 
 		defer hs.output(w, response)
+		
 		var exec reflect.Value
 		var interceptor []IInterceptor
+		
+		if len(routeActions) == 0 {
+			response.Data = "Page not found"
+			return
+		}
+		
 		for _, ra := range routeActions {
 			if strings.EqualFold(ra.method, r.Method) {
 				exec, interceptor = ra.exec, ra.interceptor
@@ -143,12 +154,20 @@ func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWr
 				}
 				response.Data = res[0].Interface()
 				return nil
-			default:
-				err := res[1].Interface()
+			case 2:
 				response.Data = res[0].Interface()
+				err := res[1].Interface()
 				if err != nil {
-					return err.(error)
+					if e, ok := err.(error); ok {
+						return e
+					} else {
+						ilog.Error("invalid type of the second return param, error accepted")
+						return nil
+					}
 				}
+				return nil
+			default:
+				ilog.Error("invalid num of return, 2 or less is accepted")
 				return nil
 			}
 		}
@@ -164,15 +183,19 @@ func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWr
 	}
 }
 
-func (hs *HttpServer) extractExec(a *action) reflect.Value{
+func (hs *HttpServer) extractExec(a *action) reflect.Value {
 	c := reflect.ValueOf(hs.Ioc.InsByName(a.Controller))
 	if !c.IsValid() {
-		panic(fmt.Sprintf("Controller [%s] need register", a.Controller))
+		ilog.Error(fmt.Sprintf("controller [%s] is nil, please check out if [%s] is registed", a.Controller, a.Controller))
+		//panic(fmt.Sprintf("Controller [%s] need register", a.Controller))
+		return reflect.ValueOf(nil)
 	}
 	m := c.MethodByName(a.Action)
 
 	if !m.IsValid() {
-		panic(fmt.Sprintf("Can not find method [%s] in [%s]", a.Action, a.Controller))
+		ilog.Error(fmt.Sprintf("can not find method [%s] in [%s]", a.Action, a.Controller))
+		return reflect.ValueOf(nil)
+		//panic(fmt.Sprintf("Can not find method [%s] in [%s]", a.Action, a.Controller))
 	}
 
 	return m
@@ -201,11 +224,11 @@ func (hs *HttpServer) stop() {
 	for {
 		select {
 		case <-	hs.Ctx.Done():
-			ilog.Info("Http server stop ...")
-			ilog.Info("Wait for all http requests return ...")
+			ilog.Info("http server stop ...")
+			ilog.Info("wait for all http requests return ...")
 			hs.wg.Wait()
 			hs.ser.Shutdown(hs.Ctx)
-			ilog.Info("Http server stop success")
+			ilog.Info("http server stop success")
 			return
 		}
 	}

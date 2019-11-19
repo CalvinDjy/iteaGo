@@ -77,6 +77,16 @@ type Config struct {
 }
 
 func InitConf(file string) {
+	FileName := fileName(file)
+	Conf = &Config{
+		FileName: FileName,
+		config: make(map[interface{}]interface{}),
+	}
+	
+	if Stop {
+		return
+	}
+	
 	var err error
 	projpath, err = os.Getwd()
 	if err != nil {
@@ -92,11 +102,6 @@ func InitConf(file string) {
 		panic("Application config extract error")
 	}
 
-	FileName := fileName(file)
-	Conf = &Config{
-		FileName: FileName,
-		config: make(map[interface{}]interface{}),
-	}
 	Conf.config[FileName] = application
 	
 	var wg sync.WaitGroup

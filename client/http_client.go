@@ -20,6 +20,7 @@ import (
 const (
 	GET_REQUEST_TIMEOUT 	= 3
 	POST_REQUEST_TIMEOUT 	= 5
+	DOWNLOAD_REQUEST_TIMEOUT 	= 10
 )
 
 type HttpClient struct {
@@ -31,53 +32,31 @@ func (c *HttpClient) Construct() {
 	c.debug = c.Ctx.Value(constant.DEBUG).(bool)
 }
 
-func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int, skipHttps bool) (result []byte, err error) {
+func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+	var body []byte
+	
 	if c.debug {
 		start := time.Now()
 		defer func() {
-			ilog.Info("【GET请求】耗时：", time.Since(start), ", 请求地址[", u,"]")
+			ilog.Info("【GET请求】耗时：", time.Since(start), ", 地址[", u, "], 返回[", string(body),"]")
 		}()
 	}
 
 	if timeout <= 0 {
 		timeout = GET_REQUEST_TIMEOUT
 	}
-	
-	client := c.client(timeout, skipHttps)
 
-	req, err := http.NewRequest("GET", u, strings.NewReader(""))
-	if err != nil {
-		return nil, err
-	}
-
-	if !strings.EqualFold(host, "") {
-		req.Host = host
-	}
-
-	for k, v := range h {
-		req.Header.Set(k, v)
-	}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	body, err := c.doGet(u, h, host, timeout, skipHttps)
+	return body, err
 }
 
-func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string, timeout int, skipHttps bool) (result []byte, err error) {
+func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+	var body []byte
+
 	if c.debug {
 		start := time.Now()
 		defer func() {
-			ilog.Info("【POST请求】耗时：", time.Since(start), ", 请求地址[", u, "]")
+			ilog.Info("【POST请求】耗时：", time.Since(start), ", 地址[", u, "], 参数[", p, "], 返回[", string(body),"]")
 		}()
 	}
 
@@ -90,43 +69,17 @@ func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, ho
 		postParams.Set(k, v)
 	}
 
-	client := c.client(timeout, skipHttps)
-	
-	req, err := http.NewRequest("POST", u, strings.NewReader(postParams.Encode()))
-	if err != nil {
-		return nil, err
-	}
-
-	if !strings.EqualFold(host, "") {
-		req.Host = host
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	for k, v := range h {
-		req.Header.Set(k, v)
-	}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	body, err := c.doPost(u, h, host, timeout, skipHttps, "application/x-www-form-urlencoded", strings.NewReader(postParams.Encode()))
+	return body, err
 }
 
-func (c *HttpClient) PostFile(u string, file string, filekey string, p map[string]string, h map[string]string, host string, timeout int, skipHttps bool) (result []byte, err error) {
+func (c *HttpClient) PostFile(u string, file string, filekey string, p map[string]string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+	var body []byte
+
 	if c.debug {
 		start := time.Now()
 		defer func() {
-			ilog.Info("【POST FILE请求】耗时：", time.Since(start), ", 请求地址[", u, "]")
+			ilog.Info("【POST FILE请求】耗时：", time.Since(start), ", 地址[", u, "], 参数[", p, "], 文件[", file ,"], 返回[", string(body),"]")
 		}()
 	}
 
@@ -163,9 +116,74 @@ func (c *HttpClient) PostFile(u string, file string, filekey string, p map[strin
 
 	bodyWriter.Close()
 
+	body, err = c.doPost(u, h, host, timeout, skipHttps, contentType, ioutil.NopCloser(bodyBuf))
+	return body, err
+}
+
+func (c *HttpClient) Download(u string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+	if c.debug {
+		start := time.Now()
+		defer func() {
+			ilog.Info("【DOWNLOAD请求】耗时：", time.Since(start), ", 地址[", u, "]")
+		}()
+	}
+
+	if timeout <= 0 {
+		timeout = DOWNLOAD_REQUEST_TIMEOUT
+	}
+
+	return c.doGet(u, h, host, timeout, skipHttps)
+}
+
+func (c *HttpClient) client(timeout int, skipHttps bool) *http.Client {
+	client := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+	}
+
+	if skipHttps {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client.Transport = tr
+	}
+	return client
+}
+
+func (c *HttpClient) doGet(u string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
 	client := c.client(timeout, skipHttps)
 
-	req, err := http.NewRequest("POST", u, ioutil.NopCloser(bodyBuf))
+	req, err := http.NewRequest("GET", u, strings.NewReader(""))
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.EqualFold(host, "") {
+		req.Host = host
+	}
+
+	for k, v := range h {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func (c *HttpClient) doPost(u string, h map[string]string, host string, timeout int, skipHttps bool, contentType string, reader io.Reader) ([]byte, error) {
+	client := c.client(timeout, skipHttps)
+
+	req, err := http.NewRequest("POST", u, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -193,18 +211,4 @@ func (c *HttpClient) PostFile(u string, file string, filekey string, p map[strin
 	}
 
 	return body, nil
-}
-
-func (c *HttpClient) client(timeout int, skipHttps bool) *http.Client {
-	client := &http.Client{
-		Timeout: time.Duration(timeout) * time.Second,
-	}
-
-	if skipHttps {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		client.Transport = tr
-	}
-	return client
 }

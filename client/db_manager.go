@@ -58,7 +58,7 @@ func (dm *DbManager) GetDbConnection(name string) (db *sql.DB) {
 		return dm.connections[name]
 	}
 	dm.connections[name] = dm.createConnection(name)
-	ilog.Info("DB connection create success for [", name, "]")
+	ilog.Info("mysql connection create success for [", name, "]")
 	return dm.connections[name]
 }
 
