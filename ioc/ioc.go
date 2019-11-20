@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"context"
+	"github.com/CalvinDjy/iteaGo/ilog"
 	"github.com/CalvinDjy/iteaGo/ioc/bean"
 	"github.com/CalvinDjy/iteaGo/process"
 	"github.com/CalvinDjy/iteaGo/system"
@@ -74,6 +75,7 @@ func (ioc *Ioc) ExecProcess(ctx context.Context, process *process.Process) {
 
 	t := ioc.getType(process.Class)
 	if t == nil {
+		ilog.Error(fmt.Sprintf("process [%s] need regist", process.Class))
 		return
 	}
 

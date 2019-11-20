@@ -32,7 +32,7 @@ func (r *Register) process() []interface{} {
 
 func (r *Register) module() []interface{} {
 	return [] interface{}{
-		ihttp.Route{},
+		//ihttp.Route{},
 	}
 }
 

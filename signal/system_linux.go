@@ -61,9 +61,6 @@ func ProcessSignal(sigs chan os.Signal, s chan bool) {
 	for{
 		msg := <-sigs
 		switch msg {
-		default:
-			ilog.Info("[linux] default: ", msg)
-			break
 		case syscall.SIGUSR1:
 			//reload
 			ilog.Info("[linux] SIGUSR1: ", msg)
@@ -75,6 +72,11 @@ func ProcessSignal(sigs chan os.Signal, s chan bool) {
 			signal.Stop(sigs)
 			s <- true
 			return
+		case nil:
+			break
+		default:
+			ilog.Info("[linux] default: ", msg)
+			break
 		}
 	}
 }

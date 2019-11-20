@@ -85,7 +85,7 @@ func (i *Itea) start() {
 		panic("Can not find config of process or process is nil")
 	}
 	
-	go signal.LogProcessInfo()
+	signal.LogProcessInfo()
 
 	s = make(chan bool)
 	defer close(s)

@@ -61,17 +61,19 @@ func ProcessSignal(sigs chan os.Signal, s chan bool) {
 	for{
 		msg := <-sigs
 		switch msg {
+		case syscall.SIGINT, syscall.SIGKILL:
+			ilog.Info("[windows]", msg)
+			signal.Stop(sigs)
+			s <- true
+			return
+		case nil:
+			break
 		default:
 			ilog.Info("[windows] default: ", msg)
 			//case syscall.SIG:
 			//reload
 			//b.App.Reload(b.Conf)
 			break
-		case syscall.SIGINT, syscall.SIGKILL:
-			ilog.Info("[windows]", msg)
-			signal.Stop(sigs)
-			s <- true
-			return
 		}
 	}
 }
