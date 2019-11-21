@@ -215,6 +215,11 @@ func (ioc *Ioc) buildInstance(t reflect.Type) interface{} {
 				f.Set(reflect.ValueOf(system.Conf.GetInt(tag)))
 			}
 			break
+		case reflect.Bool:
+			if tag := t.Field(index).Tag.Get("value"); !strings.EqualFold(tag, "") {
+				f.Set(reflect.ValueOf(system.Conf.GetBoolean(tag)))
+			}
+			break
 		default:
 			break
 		}

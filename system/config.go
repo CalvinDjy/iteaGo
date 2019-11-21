@@ -199,6 +199,18 @@ func (c *Config) GetString(key string) string {
 	return ""
 }
 
+//Get boolean value
+func (c *Config) GetBoolean(key string) bool {
+	v := c.value(key)
+	if v == nil {
+		return false
+	}
+	if s, ok := v.(bool); ok {
+		return s
+	}
+	return false
+}
+
 //Get config array
 func (c *Config) GetArray(key string) []interface{} {
 	v := c.value(key)

@@ -24,15 +24,17 @@ const (
 )
 
 type HttpClient struct {
-	Ctx 	context.Context
-	debug 	bool
+	Ctx 		context.Context
+	debug 		bool
+	Proxy   	string	`value:"client.http.proxy"`
+	SkipHttps 	bool	`value:"client.http.skip_https"`
 }
 
 func (c *HttpClient) Construct() {
 	c.debug = c.Ctx.Value(constant.DEBUG).(bool)
 }
 
-func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int) ([]byte, error) {
 	var body []byte
 	
 	if c.debug {
@@ -46,11 +48,11 @@ func (c *HttpClient) Get(u string, h map[string]string, host string, timeout int
 		timeout = GET_REQUEST_TIMEOUT
 	}
 
-	body, err := c.doGet(u, h, host, timeout, skipHttps)
+	body, err := c.doGet(u, h, host, timeout)
 	return body, err
 }
 
-func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
+func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, host string, timeout int) ([]byte, error) {
 	var body []byte
 
 	if c.debug {
@@ -69,7 +71,7 @@ func (c *HttpClient) Post(u string, p map[string]string, h map[string]string, ho
 		postParams.Set(k, v)
 	}
 
-	body, err := c.doPost(u, h, host, timeout, skipHttps, "application/x-www-form-urlencoded", strings.NewReader(postParams.Encode()))
+	body, err := c.doPost(u, h, host, timeout, "application/x-www-form-urlencoded", strings.NewReader(postParams.Encode()))
 	return body, err
 }
 
@@ -116,7 +118,7 @@ func (c *HttpClient) PostFile(u string, file string, filekey string, p map[strin
 
 	bodyWriter.Close()
 
-	body, err = c.doPost(u, h, host, timeout, skipHttps, contentType, ioutil.NopCloser(bodyBuf))
+	body, err = c.doPost(u, h, host, timeout, contentType, ioutil.NopCloser(bodyBuf))
 	return body, err
 }
 
@@ -132,25 +134,28 @@ func (c *HttpClient) Download(u string, h map[string]string, host string, timeou
 		timeout = DOWNLOAD_REQUEST_TIMEOUT
 	}
 
-	return c.doGet(u, h, host, timeout, skipHttps)
+	return c.doGet(u, h, host, timeout)
 }
 
-func (c *HttpClient) client(timeout int, skipHttps bool) *http.Client {
+func (c *HttpClient) client(timeout int) *http.Client {
 	client := &http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
 	}
 
-	if skipHttps {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		client.Transport = tr
+	tr := &http.Transport{}
+	if c.SkipHttps {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+	if c.Proxy != "" {
+		p, _ := url.Parse(c.Proxy)
+		tr.Proxy = http.ProxyURL(p)
+	}
+	client.Transport = tr
 	return client
 }
 
-func (c *HttpClient) doGet(u string, h map[string]string, host string, timeout int, skipHttps bool) ([]byte, error) {
-	client := c.client(timeout, skipHttps)
+func (c *HttpClient) doGet(u string, h map[string]string, host string, timeout int) ([]byte, error) {
+	client := c.client(timeout)
 
 	req, err := http.NewRequest("GET", u, strings.NewReader(""))
 	if err != nil {
@@ -180,8 +185,8 @@ func (c *HttpClient) doGet(u string, h map[string]string, host string, timeout i
 	return body, nil
 }
 
-func (c *HttpClient) doPost(u string, h map[string]string, host string, timeout int, skipHttps bool, contentType string, reader io.Reader) ([]byte, error) {
-	client := c.client(timeout, skipHttps)
+func (c *HttpClient) doPost(u string, h map[string]string, host string, timeout int, contentType string, reader io.Reader) ([]byte, error) {
+	client := c.client(timeout)
 
 	req, err := http.NewRequest("POST", u, reader)
 	if err != nil {
