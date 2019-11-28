@@ -101,7 +101,8 @@ func (hs *HttpServer) Execute() {
 //Http handler
 func (hs *HttpServer) handler(routeActions []routeAction) func(w http.ResponseWriter, r *http.Request){
 	return func(w http.ResponseWriter, r *http.Request){
-
+		r.ParseForm()
+		
 		hs.wg.Add(1)
 
 		response := &Response{

@@ -2,47 +2,93 @@ package ihttp
 
 import (
 	"errors"
+	"fmt"
+	"github.com/CalvinDjy/iteaGo/util/str"
 	"net/http"
 	"strings"
 )
 
-func Validate(r *http.Request, rules []map[string]string) (map[string]string, error) {
-	r.FormValue("") //init by first time
+type Rule struct {
+	Key 	string
+	Type 	string
+	Rule 	string
+	Msg 	string
+	Default interface{}
+	
+}
 
-	data := make(map[string]string)
+type res struct {
+	Key 	string
+	Value 	interface{}
+	Err 	string
+}
+
+type ret struct {
+	data map[string]interface{}
+}
+
+func (r *ret) Set(k string, v interface{}) {
+	r.data[k] = v
+}
+
+func (r *ret) GetInt(k string) int {
+	if v, ok := r.data[k].(int); ok {
+		return v
+	}
+	return 0
+}
+
+func (r *ret) GetString(k string) string {
+	if v, ok := r.data[k].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func (r *ret) GetBool(k string) bool {
+	if v, ok := r.data[k].(bool); ok {
+		return v
+	}
+	return false
+}
+
+func Validate(r *http.Request, rules []Rule) (*ret, error) {
+	data := &ret{make(map[string]interface{})}
 	l := len(rules)
-	ch := make(chan map[string]string, l)
+	ch := make(chan res, l)
 	defer close(ch)
 
 	for _, rule := range rules {
-		go func(rule map[string]string) {
-			if _, ok := rule["key"]; !ok {
-				ch <- map[string]string{"key": ""}
+		go func(rule Rule) {
+			if strings.EqualFold(rule.Key, "") {
+				ch <- res{}
 				return
 			}
-			if strings.EqualFold(rule["key"], "") {
-				ch <- map[string]string{"key": ""}
-				return
-			}
-			key, value := getValue(rule["key"], r)
-			if strings.EqualFold(value, "") {
-				if _, ok := rule["default"]; ok {
-					value = rule["default"]
+			
+			key, value := getValue(rule.Key, r)
+			if strings.EqualFold(value.(string), "") {
+				if rule.Default != nil {
+					value = rule.Default
 				}
+			} else {
+				value = swithValue(value.(string), rule.Type)
 			}
-			if _, ok := rule["rule"]; !ok {
-				ch <- map[string]string{"key": key, "value": value, "err": ""}
+			
+			if strings.EqualFold(rule.Rule, "") {
+				ch <- res{key, value, ""}
 				return
 			}
-			if checkRule(value, rule["rule"]) {
-				ch <- map[string]string{"key": key, "value": value, "err": ""}
+			if checkRule(value, rule.Rule) {
+				ch <- res{key, value, ""}
 				return
 			}
-			if _, ok := rule["msg"]; ok {
-				ch <- map[string]string{"key": key, "value": "", "err": rule["msg"]}
+			
+			if !strings.EqualFold(rule.Msg, "") {
+				ch <- res{key, "", rule.Msg}
 				return
 			}
-			ch <- map[string]string{"key": key, "value": "", "err": "Parameter [" + key + "] validate error"}
+			
+			ch <- res{key, "", fmt.Sprintf("Parameter [%s] validate error", key)}
 			return
 		}(rule)
 	}
@@ -52,15 +98,15 @@ func Validate(r *http.Request, rules []map[string]string) (map[string]string, er
 
 	for i := 0; i < l; i++ {
 		res := <-ch
-		if !strings.EqualFold(res["err"], "") {
+		if !strings.EqualFold(res.Err, "") {
 			hasError = true
-			errMsg = append(errMsg, res["err"])
+			errMsg = append(errMsg, res.Err)
 			continue
 		}
-		if strings.EqualFold(res["key"], "") {
+		if strings.EqualFold(res.Key, "") {
 			continue
 		}
-		data[res["key"]] = res["value"]
+		data.Set(res.Key, res.Value)
 	}
 
 	if hasError {
@@ -70,7 +116,7 @@ func Validate(r *http.Request, rules []map[string]string) (map[string]string, er
 	return data, nil
 }
 
-func getValue(key string, r *http.Request) (string, string) {
+func getValue(key string, r *http.Request) (string, interface{}) {
 	keyArr := strings.Split(key, "|")
 	if len(keyArr) == 1 {
 		return keyArr[0], r.FormValue(key)
@@ -81,12 +127,28 @@ func getValue(key string, r *http.Request) (string, string) {
 	return keyArr[0], ""
 }
 
-func checkRule(value string, rule string) bool {
+func swithValue(value string, typ string) interface{} {
+	switch strings.ToLower(typ) {
+	case "int":
+		return str.Toint(value)
+	case "bool":
+		return str.Tobool(value)
+	case "string":
+		return value
+	default:
+		return value
+	}
+}
+
+func checkRule(value interface{}, rule string) bool {
 	switch rule {
 	case "":
 		return true
 	case "required":
-		if strings.EqualFold(value, "") {
+		if value == nil {
+			return false
+		}
+		if v, ok := value.(string); ok && strings.EqualFold(v, "") {
 			return false
 		}
 		return true

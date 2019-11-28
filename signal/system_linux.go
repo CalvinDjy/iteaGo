@@ -4,6 +4,7 @@ package signal
 
 import (
 	"github.com/CalvinDjy/iteaGo/ilog"
+	"github.com/CalvinDjy/iteaGo/util/integer"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +14,7 @@ import (
 )
 
 func LogProcessInfo() {
-	pid := strconv.Itoa(os.Getpid())
+	pid := integer.Itos(os.Getpid())
 	ilog.Info("linux pid : ", pid)
 	file, err := os.OpenFile("pid", os.O_CREATE|os.O_WRONLY,0)
 	if err != nil {

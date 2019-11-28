@@ -205,9 +205,7 @@ func (ioc *Ioc) buildInstance(t reflect.Type) interface{} {
 			break
 		case reflect.String:
 			if tag := t.Field(index).Tag.Get("value"); !strings.EqualFold(tag, "") {
-				if v := system.Conf.GetString(tag); !strings.EqualFold(v, "") {
-					f.Set(reflect.ValueOf(v))
-				}
+				f.Set(reflect.ValueOf(system.Conf.GetString(tag)))
 			}
 			break
 		case reflect.Int:
