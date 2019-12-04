@@ -54,6 +54,7 @@ func (p *Redis) Construct() {
 
 	p.pool = redis.NewClient(p.initOpt(c.(*RedisConf)))
 
+	ilog.Info("redis pool create success")
 	//go func() {
 	//	for {
 	//		time.Sleep(time.Second)

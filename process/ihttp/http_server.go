@@ -6,12 +6,12 @@ import (
 	"github.com/CalvinDjy/iteaGo/ilog"
 	"github.com/CalvinDjy/iteaGo/ioc/iface"
 	"github.com/CalvinDjy/iteaGo/system"
-	"github.com/json-iterator/go"
+	"github.com/CalvinDjy/iteaGo/util/str"
 	"io"
 	"net/http"
 	"reflect"
-	"sync"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -238,22 +238,17 @@ func (hs *HttpServer) stop() {
 //Http server output
 func (hs *HttpServer) output(w http.ResponseWriter, response *Response) {
 	defer hs.wg.Done()
-	var json = jsoniter.Config{
-		EscapeHTML:             false,
-		SortMapKeys:            true,
-		ValidateJsonRawMessage: true,
-	}.Froze()
 	if response.Header != nil {
 		for k, v := range response.Header {
 			w.Header().Set(k, v)
 		}
 	}
 	if _, ok := (*response).Data.(string); !ok {
-		r, err := json.Marshal((*response).Data)
+		r, err := str.JsonEncode((*response).Data)
 		if err != nil {
 			ilog.Error(err)
 		}
-		io.WriteString(w, string(r))
+		io.WriteString(w, r)
 	} else {
 		io.WriteString(w, (*response).Data.(string))
 	}

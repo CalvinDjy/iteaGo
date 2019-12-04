@@ -14,7 +14,7 @@ type Rule struct {
 	Rule 	string
 	Msg 	string
 	Default interface{}
-	
+	Enum	[]interface{}
 }
 
 type res struct {
@@ -78,7 +78,7 @@ func Validate(r *http.Request, rules []Rule) (*ret, error) {
 				ch <- res{key, value, ""}
 				return
 			}
-			if checkRule(value, rule.Rule) {
+			if checkRule(value, rule) {
 				ch <- res{key, value, ""}
 				return
 			}
@@ -140,8 +140,8 @@ func swithValue(value string, typ string) interface{} {
 	}
 }
 
-func checkRule(value interface{}, rule string) bool {
-	switch rule {
+func checkRule(value interface{}, rule Rule) bool {
+	switch rule.Rule {
 	case "":
 		return true
 	case "required":
@@ -152,6 +152,13 @@ func checkRule(value interface{}, rule string) bool {
 			return false
 		}
 		return true
+	case "include":
+		for _, v := range rule.Enum {
+			if value == v {
+				return true
+			}
+		}
+		return false
 	default:
 		return false
 	}
