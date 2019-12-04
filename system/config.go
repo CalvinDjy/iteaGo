@@ -74,6 +74,7 @@ func decode(v interface{}, t reflect.Type) (interface{}, error){
 type Config struct {
 	FileName 		string
 	config			map[interface{}]interface{}
+	sl sync.RWMutex
 }
 
 func InitConf(file string) {
@@ -104,21 +105,17 @@ func InitConf(file string) {
 
 	Conf.config[FileName] = application
 	
-	var wg sync.WaitGroup
+	ch := make(chan bool)
+	defer close(ch)
 	
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		Conf.importConfig()
+		ch <-true
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Conf.dbConfig()
-	}()
-	
-	wg.Wait()
+	Conf.dbConfig()
+
+	<-ch
 }
 
 //Extract database config
@@ -133,6 +130,8 @@ func (c *Config) dbConfig() {
 		if err != nil {
 			panic(err)
 		}
+		c.sl.RLock()
+		defer c.sl.RUnlock()
 		c.config[constant.DATABASE_KEY] = databases
 	}
 }
@@ -162,7 +161,9 @@ func (c *Config) importConfig() {
 			}
 		}(f.(string))
 	}
-	
+
+	c.sl.RLock()
+	defer c.sl.RUnlock()
 	for i := 0; i < l; i++ {
 		v := <-ch
 		c.config[v[0].(string)] = v[1]

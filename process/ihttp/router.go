@@ -90,17 +90,19 @@ func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[
 			}
 			controller, deal = pathArray[0], pathArray[1]
 			if !strings.EqualFold(c.Group, "") {
+				prefix := ""
 				groupNames := strings.Split(c.Group, "|")
 				for _, groupName := range groupNames {
 					if group, ok := groups[groupName]; ok {
 						if !strings.EqualFold(group.Prefix, "") {
-							u = group.Prefix + u
+							prefix = prefix + group.Prefix
 						}
 						if !strings.EqualFold(group.Middleware, "") {
 							middleware = append(middleware, strings.Split(group.Middleware, "|")...)
 						}
 					}
 				}
+				u = prefix + u
 			}
 			if !strings.EqualFold(c.Middleware, "") {
 				middleware = append(middleware, strings.Split(c.Middleware, "|")...)

@@ -86,7 +86,7 @@ func (hs *HttpServer) Execute() {
 					interceptor: interceptor,
 				})
 			}
-			
+
 			mux.HandleFunc(path, hs.handler(routeActions))
 		}(p, as)
 	}

@@ -81,22 +81,22 @@ func (ioc *Ioc) ExecProcess(ctx context.Context, process *process.Process) {
 
 	p := reflect.New(t)
 
-	var wg sync.WaitGroup
+	ch := make(chan bool)
+	defer close(ch)
 	
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		for k, v := range process.Params {
 			setField(p, k, v)
 		}
+		ch <- true
 	}()
 
 	setField(p, NAME_KEY, process.Name)
 	setField(p, CTX_KEY, ctx)
 	setField(p, IOC_KEY, ioc)
 
-	wg.Wait()
-
+	<- ch
+	
 	// Do execute
 	var exec string
 	if !strings.EqualFold(process.ExecuteMethod, "") {
