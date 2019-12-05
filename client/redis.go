@@ -68,7 +68,7 @@ func (p *Redis) initOpt(conf *RedisConf) *redis.Options {
 	if !strings.EqualFold(conf.Host, "") {
 		host = conf.Host
 	}
-	if conf.Port == 0 {
+	if conf.Port != 0 {
 		port = conf.Port
 	}
 
