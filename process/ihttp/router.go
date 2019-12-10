@@ -2,9 +2,11 @@ package ihttp
 
 import (
 	"github.com/CalvinDjy/iteaGo/constant"
+	"github.com/CalvinDjy/iteaGo/system"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -60,16 +62,16 @@ func (r *Route) InitRoute(routeConfig string, env string) {
 	r.Actions = extract(routeConf.ActionConf, r.Groups)
 }
 
-func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[string][]*action{
-	l := len(actionConf)
+func extract(ac map[string]actionConf, groups map[string]groupConf) map[string][]*action{
+	l := len(ac)
 	ch := make(chan *action, l)
 	defer close(ch)
 	
 	actions := map[string][]*action{}
+	reg := regexp.MustCompile(`\$\((.*)\)`)
 	
-	for uri, conf := range actionConf {
-		u, c := uri, conf
-		go func() {
+	for uri, conf := range ac {
+		go func(u string, c actionConf) {
 			method, controller, deal, middleware := "get", "", "", []string{}
 			uArray := strings.Split(u, " ")
 			if len(uArray) == 2 {
@@ -95,7 +97,7 @@ func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[
 				for _, groupName := range groupNames {
 					if group, ok := groups[groupName]; ok {
 						if !strings.EqualFold(group.Prefix, "") {
-							prefix = prefix + group.Prefix
+							prefix = prefix + prefixMatch(reg, group.Prefix)
 						}
 						if !strings.EqualFold(group.Middleware, "") {
 							middleware = append(middleware, strings.Split(group.Middleware, "|")...)
@@ -114,7 +116,7 @@ func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[
 				Action:deal,
 				Middleware:middleware,
 			}
-		}()
+		}(uri, conf)
 	}
 	
 	for i := 0; i < l; i++ {
@@ -128,4 +130,12 @@ func extract(actionConf map[string]actionConf, groups map[string]groupConf) map[
 		actions[a.Uri] = append(actions[a.Uri], a)
 	}
 	return actions
+}
+
+func prefixMatch(reg *regexp.Regexp, prefix string) string {
+	match := reg.FindStringSubmatch(prefix)
+	if len(match) != 2 {
+		return prefix
+	}
+	return strings.ReplaceAll(prefix, match[0], system.String(match[1]))
 }
